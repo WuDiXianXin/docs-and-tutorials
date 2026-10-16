@@ -24,7 +24,7 @@ Virtio-FS 是专为虚拟机设计的共享文件系统，性能接近本地文�
    - 选择或创建自定义存储，选择 virtio-win 驱动 ISO。
    - 如果还没有，可以从 [Fedora 项目页面](https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/) 下载。
    - **设备类型（Device type）**：**CDROM 设备**
-   - **总线类型（Bus type）**：**VirtIO**
+   - **总线类型（Bus type）**：**SATA**
    - **高级选项**：只读（勾选）
 
 ### 2.2 安装 WinFsp

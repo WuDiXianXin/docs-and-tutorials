@@ -1,5 +1,10 @@
 # 配置 Arch Linux
 
+> [!IMPORTANT]
+> 建议不安装 **Arch Linux**，直接安装 **CachyOS** 更方便和性能更好。
+> 
+> 本文档已经是一两年前的，可能部分内容不符合 **现代化配置**。
+
 > [!NOTE]
 > By WuDiXianXin
 >> [!TIP]

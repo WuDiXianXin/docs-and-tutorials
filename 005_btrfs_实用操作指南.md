@@ -9,7 +9,7 @@
 
 ## 目录
 
-- [Btrfs简介](#Btrfs简介)
+- [简介](#简介)
 - [核心概念](#核心概念)
 - [安装与准备](#安装与准备)
 - [子卷规划建议](#子卷规划建议)
@@ -23,11 +23,11 @@
 - [自动化工具推荐](#自动化工具推荐)
 - [最佳实践与注意事项](#最佳实践与注意事项)
 - [故障排查](#故障排查)
-- [附录：快照脚本示例](#附录：快照脚本示例)
+- [附录-快照脚本示例](#附录-快照脚本示例)
 
 ---
 
-## Btrfs简介
+## 简介
 
 Btrfs 是一种现代的 Copy-on-Write 文件系统，支持：
 
@@ -137,6 +137,9 @@ sudo btrfs subvolume create /mnt/@
 sudo btrfs subvolume create /mnt/@home
 sudo btrfs subvolume create /mnt/@log
 sudo btrfs subvolume create /mnt/@cache
+sudo btrfs subvolume create /mnt/@tmp
+sudo btrfs subvolume create /mnt/@kvm
+sudo btrfs subvolume create /mnt/@git
 sudo btrfs subvolume create /mnt/.snapshots
 
 # 查看结果
@@ -633,7 +636,7 @@ sudo btrfs filesystem df /
 
 ---
 
-## 附录：快照脚本示例
+## 附录-快照脚本示例
 
 ### 创建根与 home 只读快照
 

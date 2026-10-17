@@ -2,7 +2,15 @@
 
 Virtio-FS 是专为虚拟机设计的共享文件系统，性能接近本地文件系统。但 Windows 客户机（虚拟机系统）需要额外安装驱动和服务。
 
-## 1. 主机端（Linux）配置
+## 目录
+
+- [主机端配置](#主机端配置)
+- [Windows 10 虚拟机端配置](#Windows10虚拟机端配置)
+- [理解 Target Path](#理解Target-Path)
+- [Btrfs 重要优化：关闭 CoW](#Btrfs重要优化--关闭CoW)
+- [相关链接](#相关链接)
+
+## 主机端配置
 
 1. **关闭虚拟机**。
 2. 在 virt-manager 中打开虚拟机详情，在 **内存（Memory）** 选项卡中勾选 **“启用共享内存（Enable shared memory）”**。
@@ -12,9 +20,9 @@ Virtio-FS 是专为虚拟机设计的共享文件系统，性能接近本地文�
    - **目标路径（Target Path）**：一个标识符，例如 `share_tag`，供客户机（虚拟机系统）挂载时使用
 4. 应用后启动虚拟机。
 
-## 2. Windows 10 虚拟机端配置
+## Windows10虚拟机端配置
 
-### 2.1 准备 virtio-win 驱动 ISO
+### 准备 virtio-win 驱动 ISO
 
 将 **virtio-win 驱动 ISO** 挂载到虚拟机的光驱，步骤如下：
 
@@ -27,19 +35,19 @@ Virtio-FS 是专为虚拟机设计的共享文件系统，性能接近本地文�
    - **总线类型（Bus type）**：**SATA**
    - **高级选项**：只读（勾选）
 
-### 2.2 安装 WinFsp
+### 安装 WinFsp
 
 - 从 [WinFsp 下载页面](https://winfsp.dev/rel/) 下载最新的 `.msi` 安装包。
 - 运行安装程序，例如 `winfsp-*.msi`，安装时至少勾选 **“Core”** 功能。
 - 完成安装后，重启 Windows 虚拟机。
 
-### 2.3 安装 virtio-win 驱动与客户机工具
+### 安装 virtio-win 驱动与客户机工具
 
 - 确保 virtio-win ISO 已挂载到虚拟机的光驱。
 - 进入光驱目录，运行 `virtio-win-guest-tools.exe`，按照提示完成安装。
 - 安装完成后，再次重启虚拟机。
 
-### 2.4 手动启动 VirtioFS 服务
+### 手动启动 VirtioFS 服务
 
 这是最关键的一步，很多教程会漏掉。`virtio-win-guest-tools.exe` 可能不会自动启动服务。
 
@@ -49,7 +57,7 @@ Virtio-FS 是专为虚拟机设计的共享文件系统，性能接近本地文�
 4. 将 **“启动类型”** 改为 **“自动”**，然后点击 **“启动”**。
 5. 确认服务状态变为“正在运行”后，点击 **“应用”** 和 **“确定”**。
 
-### 2.5 验证共享目录
+### 验证共享目录
 
 - 打开文件资源管理器，点击“此电脑”。
 - 如果一切正常，你应该能看到一个新的驱动器盘符，通常从 `Z:` 开始，它对应的就是你在 virt-manager 中设置的共享文件夹。
@@ -57,7 +65,7 @@ Virtio-FS 是专为虚拟机设计的共享文件系统，性能接近本地文�
 
 > 根据 Red Hat 的文档，每次虚拟机重启后，可能需要重新启动 VirtioFS 服务才能访问共享目录。将其设置为“自动”启动可以简化这个过程。
 
-## 3. 理解 Target Path
+## 理解Target-Path
 
 “Target Path” 在这里**不是虚拟机里的真实目录路径**，而是给这个 Virtio-FS 共享起的一个**标签名 / 别名 / 门牌号**。客户机挂载时靠这个名字来找到主机共享出来的目录。
 
@@ -110,7 +118,7 @@ sudo mount -t virtiofs share_tag /mnt/share
 
 这里的 `<target dir='share_tag'/>` 就是 virt-manager 界面里的 “Target Path”。它本质上是 Virtio-FS 的 **mount tag**，不是路径。
 
-## 4. Btrfs 重要优化：关闭 CoW
+## Btrfs重要优化--关闭CoW
 
 如果共享目录或虚拟机磁盘镜像存放在 Btrfs 分区上，**强烈建议关闭该目录的 Copy-on-Write（CoW）功能**。
 

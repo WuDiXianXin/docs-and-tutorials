@@ -1,8 +1,10 @@
-# Btrfs 实用操作指南
+# Btrfs 实用操作指南（CachyOS 实测修订版）
 
 > 原作者：WuDiXianXin  
 > 整理补充：附带目录、常用命令、维护与故障排查  
-> 适用环境：Linux + `btrfs-progs`，示例设备 `/dev/nvme0n1p2` 请替换为你的实际分区  
+> 本版修订：基于 CachyOS / Arch Linux 实际部署（NVMe SSD + Btrfs + snapper + zram），
+> 与一两年前的初版相比，主要在**子卷布局、压缩级别、nodatacow 使用、快照嵌套、tmpfs/zram、挂载选项**上做了对齐。  
+> 适用环境：Linux + `btrfs-progs`，示例设备 `/dev/nvme0n1p3` 请替换为你的实际分区  
 > 警告：涉及删除子卷、回滚系统、`send/receive`、`balance`、`defragment` 等操作前，请先确认路径与备份。
 
 ---
@@ -14,11 +16,13 @@
 - [安装与准备](#安装与准备)
 - [子卷规划建议](#子卷规划建议)
 - [创建与挂载子卷](#创建与挂载子卷)
+- [fstab 完整示例](#fstab-完整示例)
+- [zram 与 tmpfs 的配合](#zram-与-tmpfs-的配合)
 - [快照管理](#快照管理)
 - [系统回滚恢复](#系统回滚恢复)
 - [挂载单个快照提取文件](#挂载单个快照提取文件)
 - [备份与迁移](#备份与迁移)
-- [维护、检查与优化](#维护、检查与优化)
+- [维护、检查与优化](#维护-检查-优化)
 - [常用命令速查](#常用命令速查)
 - [自动化工具推荐](#自动化工具推荐)
 - [最佳实践与注意事项](#最佳实践与注意事项)
@@ -55,6 +59,7 @@ Btrfs 是一种现代的 Copy-on-Write 文件系统，支持：
 | 只读快照 | 常用于备份、回滚、`send/receive`，防止误改历史版本 |
 | 默认子卷 | 挂载 Btrfs 时不指定 `subvol=` 时挂载的子卷 |
 | CoW | 写时复制，修改数据时写新块，旧数据保留给快照引用 |
+| nodatacow | 关闭数据 CoW，适合日志、缓存、虚拟机镜像等写多场景 |
 | scrub | 校验数据与校验和，发现并尝试修复损坏块 |
 | balance | 重新分布数据块，可回收空间、调整 RAID 布局 |
 | qgroup | 配额组，用于统计子卷/快照空间占用 |
@@ -66,7 +71,7 @@ Btrfs 是一种现代的 Copy-on-Write 文件系统，支持：
 常见发行版安装 `btrfs-progs`：
 
 ```bash
-# Arch Linux / Manjaro
+# Arch Linux / CachyOS / Manjaro
 sudo pacman -S btrfs-progs
 
 # Debian / Ubuntu
@@ -84,109 +89,247 @@ sudo zypper install btrfsprogs
 
 ```bash
 # 查看磁盘与文件系统
-lsblk -f
+lsblk -pf
 
 # 查看 Btrfs 文件系统信息
 sudo btrfs filesystem show
+
+# 查看子卷列表（表格形式）
+sudo btrfs subvolume list -t /
 ```
 
 建议：
 
-- 系统回滚、修复、迁移时，优先使用 Arch/Linux Live ISO，自带 `btrfs-progs`。
-- 操作前确认设备名，例如 `/dev/nvme0n1p2`、`/dev/sda2`。
+- 系统回滚、修复、迁移时，优先使用 Arch/CachyOS Live ISO，自带 `btrfs-progs`。
+- 操作前确认设备名，例如 `/dev/nvme0n1p3`。
 - 不要在已挂载为 `/` 且正在运行的系统上随意删除根子卷。
 
 ---
 
 ## 子卷规划建议
 
-最常见的布局如下，便于快照管理，并与 `snapper`、`timeshift`、`grub-btrfs` 等工具兼容：
+**本版布局对应实际部署**（NVMe 单盘 + snapper 自动快照），比初版的 `@ / @home / @log / @cache / .snapshots` 更细，主要新增：`@root`、`@srv`、`@tmp`、`@kvm`、`@git`，并把快照目录改为**嵌套子卷**（snapper 自动管理）。
 
 | 子卷 | 挂载点 | 说明 |
 |---|---|---|
-| `@` | `/` | 根文件系统主体 |
-| `@home` | `/home` | 用户数据，建议独立快照 |
-| `@log` | `/var/log` | 日志变化频繁，可不纳入根快照 |
-| `@cache` | `/var/cache` | 缓存可丢弃，可不纳入快照 |
-| `.snapshots` | `/.snapshots` | 集中存放快照，推荐点开头隐藏，且作为独立子卷 |
+| `@` | `/` | 根文件系统主体，含 `.snapshots` 嵌套子卷 |
+| `@home` | `/home` | 用户数据，独立快照；含 `@home/.snapshots` 嵌套子卷 |
+| `@root` | `/root` | root 用户家目录，独立子卷，避免混入根快照 |
+| `@srv` | `/srv` | 服务数据 |
+| `@log` | `/var/log` | 日志，变化频繁，**nodatacow + noexec/nodev/nosuid** |
+| `@cache` | `/var/cache` | 缓存，**nodatacow + noexec/nodev/nosuid** |
+| `@tmp` | `/var/tmp` | 临时数据，**nodatacow + noexec/nodev/nosuid** |
+| `@kvm` | `/kvm` | 虚拟机镜像，**nodatacow**（避免 CoW 放大写入） |
+| `@git` | `/git` | 代码仓库，保留 CoW + 压缩 |
+| `.snapshots` | 嵌套在 `@` 下 | snapper 自动挂载，**不写入 fstab** |
+| `@home/.snapshots` | 嵌套在 `@home` 下 | 同上 |
 
-推荐：
+**与初版的关键差异：**
 
-- 根快照子卷用 `@`。
-- 快照存储用 `.snapshots`，并作为独立子卷挂载到 `/.snapshots`。
-- 这样回滚根子卷时，不会误删快照本身。
-- 2025–2026 年社区常见做法与 openSUSE、Fedora Silverblue、Ubuntu 部分方案、Arch snapper 指南保持一致。
-
-创建与挂载详细步骤可参考：  
-[《001_安装_Arch_Linux.md》 → “btrfs 文件系统” 章节](https://gitee.com/wudixianxin/open/blob/main/001_安装_Arch_Linux.md)
+1. **快照目录不再作为顶层独立子卷挂到 `/.snapshots`**，而是作为 `@` 的嵌套子卷（`subvolid=5` 下的 `.snapshots`，top level 是 `@` 的 ID）。snapper 会在 `@` 下自动创建并管理，**fstab 中不写这一条**。
+2. **`/var/log`、`/var/cache`、`/var/tmp`、`/kvm` 使用 `nodatacow`**：这些目录写入频繁、数据寿命短，CoW + 压缩反而增加写放大。
+3. **压缩级别用 `zstd:1` 而不是 `zstd:3`**：NVMe SSD 上 zstd:1 已经能拿到大部分压缩收益，CPU 开销更低，配合 `discard=async` 体验更好。如果你更在意空间可以升到 `zstd:3`。
+4. **`space_cache=v2` 已省略**：新内核（≥ 5.15）默认就是 v2，无需显式写。
+5. **显式 `ssd,discard=async`**：`ssd` 让 btrfs 使用 SSD 优化路径，`discard=async` 由内核在后台异步 TRIM，比同步 discard 更温和。
 
 ---
 
 ## 创建与挂载子卷
 
-以下示例适合在 Live ISO 或安装阶段操作。假设 Btrfs 分区为 `/dev/nvme0n1p2`。
+以下示例适合在 Live ISO 或安装阶段操作。假设 Btrfs 分区为 `/dev/nvme0n1p3`。
 
 ### 创建子卷
 
 ```bash
-# 挂载顶层子卷
-sudo mount /dev/nvme0n1p2 /mnt
+# 挂载顶层子卷（subvolid=5）
+sudo mount /dev/nvme0n1p3 /mnt
 
 # 创建推荐子卷
 sudo btrfs subvolume create /mnt/@
 sudo btrfs subvolume create /mnt/@home
+sudo btrfs subvolume create /mnt/@root
+sudo btrfs subvolume create /mnt/@srv
 sudo btrfs subvolume create /mnt/@log
 sudo btrfs subvolume create /mnt/@cache
 sudo btrfs subvolume create /mnt/@tmp
 sudo btrfs subvolume create /mnt/@kvm
 sudo btrfs subvolume create /mnt/@git
-sudo btrfs subvolume create /mnt/.snapshots
 
 # 查看结果
 sudo btrfs subvolume list /mnt
+
+# 说明：.snapshots 与 @home/.snapshots 由 snapper 首次运行时自动创建，
+# 也可以手动预建（推荐）：
+sudo btrfs subvolume create /mnt/@/.snapshots
+sudo btrfs subvolume create /mnt/@home/.snapshots
 ```
 
-### 挂载子卷
+### 挂载子卷（安装阶段）
 
 ```bash
 sudo umount /mnt
 
 # 挂载根子卷 @
-sudo mount -o subvol=@,compress=zstd:3,noatime,space_cache=v2 /dev/nvme0n1p2 /mnt
+sudo mount -o subvol=@,compress=zstd:1,noatime,ssd,discard=async /dev/nvme0n1p3 /mnt
 
 # 创建挂载点
-sudo mkdir -p /mnt/home
-sudo mkdir -p /mnt/var/log
-sudo mkdir -p /mnt/var/cache
-sudo mkdir -p /mnt/.snapshots
+sudo mkdir -p /mnt/{home,root,srv,var/log,var/cache,var/tmp,kvm,git}
 
-# 挂载其他子卷
-sudo mount -o subvol=@home,compress=zstd:3,noatime /dev/nvme0n1p2 /mnt/home
-sudo mount -o subvol=@log,compress=zstd:3,noatime /dev/nvme0n1p2 /mnt/var/log
-sudo mount -o subvol=@cache,compress=zstd:3,noatime /dev/nvme0n1p2 /mnt/var/cache
-sudo mount -o subvol=.snapshots,compress=zstd:3,noatime /dev/nvme0n1p2 /mnt/.snapshots
+# 挂载其余子卷
+sudo mount -o subvol=@home,compress=zstd:1,noatime,ssd,discard=async   /dev/nvme0n1p3 /mnt/home
+sudo mount -o subvol=@root,compress=zstd:1,noatime,ssd,discard=async   /dev/nvme0n1p3 /mnt/root
+sudo mount -o subvol=@srv,compress=zstd:1,noatime,ssd,discard=async    /dev/nvme0n1p3 /mnt/srv
+sudo mount -o subvol=@log,noatime,nodatacow,noexec,nodev,nosuid,ssd,discard=async   /dev/nvme0n1p3 /mnt/var/log
+sudo mount -o subvol=@cache,noatime,nodatacow,noexec,nodev,nosuid,ssd,discard=async /dev/nvme0n1p3 /mnt/var/cache
+sudo mount -o subvol=@tmp,noatime,nodatacow,noexec,nodev,nosuid,ssd,discard=async   /dev/nvme0n1p3 /mnt/var/tmp
+sudo mount -o subvol=@kvm,noatime,nodatacow,noexec,nodev,nosuid,ssd,discard=async   /dev/nvme0n1p3 /mnt/kvm
+sudo mount -o subvol=@git,compress=zstd:1,noatime,ssd,discard=async    /dev/nvme0n1p3 /mnt/git
 ```
 
-### `/etc/fstab` 示例
+### fstab-完整示例
+
+**这是本次修订的核心**，与初版差异最大。所有 btrfs 子卷 `pass=0`（btrfs 不做传统 fsck）；`/boot` 是 vfat，`pass=2`。
 
 ```fstab
-UUID=你的UUID /             btrfs subvol=@,compress=zstd:3,noatime,space_cache=v2 0 0
-UUID=你的UUID /home         btrfs subvol=@home,compress=zstd:3,noatime             0 0
-UUID=你的UUID /var/log      btrfs subvol=@log,compress=zstd:3,noatime              0 0
-UUID=你的UUID /var/cache    btrfs subvol=@cache,compress=zstd:3,noatime            0 0
-UUID=你的UUID /.snapshots   btrfs subvol=.snapshots,compress=zstd:3,noatime        0 0
+# <file system>             <mount point>  <type>  <options>  <dump>  <pass>
+UUID=4BE6-F7C6                            /boot          vfat    rw,noatime,nodev,nosuid,noexec,fmask=0177,dmask=0077,shortname=mixed,utf8,errors=remount-ro 0 2
+UUID=bd857a9e-d85f-479e-be0b-a97e782e9a7c swap           swap    defaults   0 0
+
+UUID=266a2b91-1b69-46e4-a562-5177e3fb243a /              btrfs   rw,noatime,compress=zstd:1,ssd,discard=async,subvol=/@          0 0
+UUID=266a2b91-1b69-46e4-a562-5177e3fb243a /home          btrfs   rw,noatime,compress=zstd:1,ssd,discard=async,subvol=/@home      0 0
+UUID=266a2b91-1b69-46e4-a562-5177e3fb243a /root          btrfs   rw,noatime,compress=zstd:1,ssd,discard=async,subvol=/@root      0 0
+UUID=266a2b91-1b69-46e4-a562-5177e3fb243a /srv           btrfs   rw,noatime,compress=zstd:1,ssd,discard=async,subvol=/@srv       0 0
+
+UUID=266a2b91-1b69-46e4-a562-5177e3fb243a /var/log       btrfs   rw,noatime,nodatacow,noexec,nodev,nosuid,ssd,discard=async,commit=90,subvol=/@log    0 0
+UUID=266a2b91-1b69-46e4-a562-5177e3fb243a /var/cache     btrfs   rw,noatime,nodatacow,noexec,nodev,nosuid,ssd,discard=async,commit=120,subvol=/@cache 0 0
+UUID=266a2b91-1b69-46e4-a562-5177e3fb243a /var/tmp       btrfs   rw,noatime,nodatacow,noexec,nodev,nosuid,ssd,discard=async,commit=120,subvol=/@tmp   0 0
+
+UUID=266a2b91-1b69-46e4-a562-5177e3fb243a /kvm           btrfs   rw,noatime,nodatacow,noexec,nodev,nosuid,ssd,discard=async,commit=60,subvol=/@kvm    0 0
+UUID=266a2b91-1b69-46e4-a562-5177e3fb243a /git           btrfs   rw,noatime,compress=zstd:1,ssd,discard=async,subvol=/@git          0 0
+
+tmpfs                                     /tmp           tmpfs   defaults,noatime,mode=1777 0 0
 ```
 
-> `space_cache=v2` 在新内核中通常已是默认值。旧内核若不支持可省略。  
-> 使用 `UUID` 更稳妥，可用 `blkid` 查看。
+**关于挂载选项的补充说明：**
+
+- `compress=zstd:1`：NVMe 上性价比最高，想更省空间可换 `zstd:3`。
+- `nodatacow`：只对 `/var/log`、`/var/cache`、`/var/tmp`、`/kvm` 使用，其他子卷保留 CoW 以便快照。
+- `noexec,nodev,nosuid`：对上述四个“写多且不需要执行”的子卷做安全加固。
+- `commit=90/120/60`：拉长事务提交间隔，减少 btrfs 事务写入，代价是掉电时可能丢最近的几十秒日志/缓存。
+- `/boot` 的 `fmask=0177,dmask=0077`：等价于文件 `0600`、目录 `0700`。若你用 GRUB 或非 root 工具改 /boot，建议改成 `fmask=0137,dmask=0077`（即文件 0640、目录 0700）。
+- `.snapshots` 与 `@home/.snapshots` **不写 fstab**，由 snapper 自动挂载。
+- `space_cache=v2` 已省略，新内核默认。
+
+---
+
+## zram-与-tmpfs-的配合
+
+**这是初版完全没提的内容**，但在 CachyOS / 现代 Arch 上是标配。
+
+### zram
+
+CachyOS 默认安装 `zram-generator`（`/etc/systemd/zram-generator.conf`），开机自动创建 zram 块设备并作为 swap 使用。典型大小是物理内存的一半或全部。
+
+```bash
+# 查看 zram 状态
+zramctl
+cat /proc/swaps
+swapon --show
+
+# 查看 zram-generator 配置
+cat /etc/systemd/zram-generator.conf
+```
+
+**优先级注意事项：**
+
+- zram 的 swap 优先级应**高于**磁盘 swap，否则内核会优先写磁盘。
+- `zram-generator` 默认给 zram `pri=100`；fstab 里的磁盘 swap 默认 `pri=-2`，一般已经正确。
+- 用 `cat /proc/swaps` 一眼确认：
+
+```text
+Filename                Type            Size            Used    Priority
+/dev/zram0              partition       16035712        0       100
+/dev/nvme0n1p2          partition       16777212        0       -2
+```
+
+### tmpfs on /tmp
+
+初版 fstab 示例里没有 `/tmp`，本版显式把 `/tmp` 挂到 tmpfs：
+
+```fstab
+tmpfs  /tmp  tmpfs  defaults,noatime,mode=1777  0 0
+```
+
+理由：
+
+- `/tmp` 在 FHS 里语义是“可清空、不跨重启保留”，tmpfs 天然符合。
+- 减少 SSD 写入。
+- 大文件（如编译中间产物、下载缓存）会占用内存，注意内存足够。
+
+**注意：** `/var/tmp` 是**持久化**的临时目录（跨重启保留），所以**不能**换成 tmpfs，仍然落在 btrfs `@tmp` 上。
 
 ---
 
 ## 快照管理
 
-### 创建只读快照
+### 本版关键差异：快照由 snapper 自动管理
 
-日常备份强烈建议使用只读快照 `-r`，防止误操作修改历史版本。
+初版是手动 `btrfs subvolume snapshot -r`，本版实际用的是 **snapper + snap-pac**：
+
+- `snapper` 在 `@` 下创建 `.snapshots` 嵌套子卷，并在 `@home` 下创建 `@home/.snapshots`。
+- `snap-pac` 在每次 `pacman` 事务前后自动创建 pre/post 快照。
+- `snapper` 通过 `/etc/snapper/configs/root`、`/etc/snapper/configs/home` 管理保留策略。
+
+> [!TIP]
+> 也可以使用 btrfs-assistant 进行图形化 使用 snapper 管理哟~
+
+**查看当前快照：**
+
+```bash
+# 系统级（对应 @）
+sudo snapper -c root list
+
+# 用户数据级（对应 @home）
+sudo snapper -c home list
+
+# 底层 btrfs 视角
+sudo btrfs subvolume list -t /
+
+# 某个快照详情
+sudo snapper -c root status 1..0
+```
+
+**手动创建快照：**
+
+```bash
+# 创建一对 pre/post 快照
+sudo snapper -c root create --command "pacman -Syu"
+
+# 只创建单个快照
+sudo snapper -c root create --description "before upgrade"
+sudo snapper -c home create --description "before big move"
+```
+
+**删除与清理：**
+
+```bash
+# 删除某个快照
+sudo snapper -c root delete <编号>
+
+# 按保留策略自动清理（snapper 会跑定时器）
+sudo snapper -c root cleanup number
+```
+
+### 手动创建只读快照（仍可用）
+
+如果你不想用 snapper，或想给非系统子卷（`@git`、`@srv`、`@kvm`）单独做快照，仍可手动：
+
+```bash
+# 注意：@git、@srv、@kvm 没有自己的 .snapshots 子卷，
+# 需要先建目录（在 btrfs 里就是普通目录），或者放到 @ 的 .snapshots 下。
+sudo mkdir -p /git/.snapshots
+sudo btrfs subvolume snapshot -r /git /git/.snapshots/$(date +%Y%m%d-%H%M)_git
+```
 
 命名建议：
 
@@ -195,107 +338,93 @@ UUID=你的UUID /.snapshots   btrfs subvol=.snapshots,compress=zstd:3,noatime   
 
 便于排序和识别。
 
-```bash
-# 根子卷 @ 的只读快照
-sudo btrfs subvolume snapshot -r / /.snapshots/$(date +%Y%m%d-%H%M)_root
-
-# home 子卷的只读快照
-sudo btrfs subvolume snapshot -r /home /.snapshots/$(date +%Y%m%d-%H%M)_home
-```
-
-输出示例：
-
-```text
-create readonly snapshot of '/' in '/.snapshots/20260120-1427_root'
-```
-
-小技巧：可写脚本自动化，配合 `cron` 或 `systemd timer` 定时创建。
-
 ### 查看快照与子卷
 
 ```bash
 # 列出当前文件系统中的子卷
 sudo btrfs subvolume list /
 
-# 以表格形式查看
+# 以表格形式查看（含 top level 层级）
 sudo btrfs subvolume list -t /
 
 # 查看某个子卷/快照详情
-sudo btrfs subvolume show /.snapshots/20260120-1427_root
+sudo btrfs subvolume show /.snapshots/1/snapshot
 ```
 
 ### 删除快照
 
 ```bash
+# 手动删除（谨慎，snapper 管理的快照请用 snapper delete）
 sudo btrfs subvolume delete /.snapshots/20260120-1427_root
 ```
 
 批量清理建议：
 
-- 写脚本按时间保留，例如保留最近 7 天、最近 4 周、最近 6 个月。
-- 使用 `snapper`、`btrbk` 等工具自动管理保留策略。
+- snapper 用户直接用 `snapper cleanup`。
+- 非 snapper 用户写脚本按时间保留，例如保留最近 7 天、最近 4 周、最近 6 个月。
 - 删除快照后空间不一定立即释放，可能仍被其他快照引用；可结合 `btrfs filesystem usage` 观察。
 
 ---
 
 ## 系统回滚恢复
 
-最安全方式：使用 Arch/Linux Live ISO 启动，自带 `btrfs-progs`。
+最安全方式：使用 Arch/CachyOS Live ISO 启动，自带 `btrfs-progs`。
 
-> 前提：`.snapshots` 最好是独立子卷。否则删除 `@` 时可能连同快照一起删除。
+> 前提：`.snapshots` 最好是独立子卷或嵌套子卷。本版方案里 `.snapshots` 嵌套在 `@` 下，回滚 `@` 时要小心——**只读快照本身在 `@` 之外还是之内，决定了回滚步骤**。snapper 的方案是把 `.snapshots` 放在 `@` 内部，所以不能简单“删除 @ 再重建”，需要用 snapper 的 rollback 或者手动搬运。
 
-### 确认分区
+### 方式一：使用 snapper rollback（推荐）
+
+如果你用 snapper，直接：
 
 ```bash
-lsblk -f
+# 从 Live ISO 或从运行系统（重启后生效）
+sudo snapper -c root rollback <快照编号>
+sudo reboot
 ```
 
-### 挂载 Btrfs 文件系统
+snapper 会把该快照复制为新的 `@`，并把旧的 `@` 保留为 `@.old`（可后续删除）。
 
-不指定 `subvol`，让它挂载默认子卷；通常可看到顶层子卷内容。
-
-```bash
-sudo mount /dev/nvme0n1p2 /mnt
-```
-
-### 查看所有子卷/快照
+### 方式二：手动回滚（无 snapper 或想完全控制）
 
 ```bash
-sudo btrfs subvolume list /mnt
-```
+# 1. 启动 Live ISO，确认分区
+lsblk -pf
 
-### 恢复根子卷 `@`
+# 2. 挂载顶层子卷
+sudo mount /dev/nvme0n1p3 /mnt
 
-```bash
-# 先删除损坏的 @（如果 delete 失败，先清空内容）
-sudo btrfs subvolume delete /mnt/@
+# 3. 查看所有子卷/快照
+sudo btrfs subvolume list -t /mnt
 
-# 如果删除失败，可先清空再删，但极度小心路径
-# sudo rm -rf /mnt/@/* /mnt/@/.[!.]*
-# sudo btrfs subvolume delete /mnt/@
+# 4. 假设要恢复的快照是 /mnt/@/.snapshots/1/snapshot
+#    先把旧 @ 改名（不要直接删，留作保险）
+sudo mv /mnt/@ /mnt/@.old
 
-# 从只读快照重建可写 @
-sudo btrfs subvolume snapshot /mnt/.snapshots/20260120-1427_root /mnt/@
-```
+# 5. 从只读快照重建可写 @（-r 源是只读，重建的是可写副本）
+sudo btrfs subvolume snapshot /mnt/@.old/.snapshots/1/snapshot /mnt/@
 
-### 同理处理 `@home`
+# 6. 把 .snapshots 搬回新 @ 内部（如果快照目录在 @ 里）
+#    注意：如果 .snapshots 是嵌套在 @ 下的独立子卷，
+#    上面的 snapshot 会把它一起带过来；如果是独立顶层子卷，则不用搬。
 
-如果 `/home` 也需要回滚：
-
-```bash
-sudo btrfs subvolume delete /mnt/@home
-sudo btrfs subvolume snapshot /mnt/.snapshots/20260120-1427_home /mnt/@home
-```
-
-### 卸载并重启
-
-```bash
+# 7. 卸载并重启
 sudo umount /mnt
 reboot
 ```
 
 > 重要：只要子卷名字和原来一样，`/etc/fstab` 通常无需修改，因为 `subvol=@` 等选项不变。  
 > 如果使用默认子卷启动，则可能需要 `btrfs subvolume set-default` 调整默认子卷。
+
+### 同理处理 `@home`
+
+如果 `/home` 也需要回滚（snapper 的 home 配置）：
+
+```bash
+sudo snapper -c home rollback <快照编号>
+# 或手动
+sudo mv /mnt/@home /mnt/@home.old
+sudo btrfs subvolume snapshot /mnt/@home.old/.snapshots/1/snapshot /mnt/@home
+```
 
 ---
 
@@ -306,12 +435,13 @@ reboot
 ```bash
 sudo mkdir -p /mnt/snap
 
-# 方式1：直接用 subvol= 选项挂载特定快照
-sudo mount -t btrfs -o subvol=.snapshots/20260120-1427_root,ro \
-     /dev/nvme0n1p2 /mnt/snap
+# 方式1：直接用 subvol= 选项挂载 snapper 快照
+# snapper 快照路径通常是 @/.snapshots/<编号>/snapshot
+sudo mount -t btrfs -o subvol=/@/.snapshots/1/snapshot,ro \
+     /dev/nvme0n1p3 /mnt/snap
 
 # 方式2：如果已挂载根文件系统，可用 bind 方式
-sudo mount --bind /.snapshots/20260120-1427_root /mnt/snap
+sudo mount --bind /.snapshots/1/snapshot /mnt/snap
 sudo mount -o remount,ro,bind /mnt/snap
 
 # 用完记得卸载
@@ -319,7 +449,7 @@ sudo umount /mnt/snap
 ```
 
 > 注意：`subvol=` 路径是相对于 Btrfs 顶层子卷的路径。  
-> 如果 `.snapshots` 是独立子卷，通常路径为 `.snapshots/快照名`。
+> snapper 的快照路径带前缀 `/@/.snapshots/编号/snapshot`，与初版的手动快照路径不同。
 
 ---
 
@@ -343,21 +473,18 @@ sudo umount /mnt/snap
 
 ```bash
 # 发送到文件
-sudo btrfs send /.snapshots/20260120-1427_root > /path/to/external/20260120_root.btrfs
+sudo btrfs send /.snapshots/1/snapshot > /path/to/external/20260120_root.btrfs
 
 # 或直接管道到 receive，节省本地空间
-sudo btrfs send /.snapshots/20260120-1427_root | sudo btrfs receive /mnt/backup
+sudo btrfs send /.snapshots/1/snapshot | sudo btrfs receive /mnt/backup
 ```
 
 ### 增量备份（后续）
 
 ```bash
-# 先创建新只读快照
-sudo btrfs subvolume snapshot -r / /.snapshots/$(date +%Y%m%d-%H%M)_root
-
-# 增量发送，-p 指定共同祖先
-sudo btrfs send -p /.snapshots/20260120-1427_root \
-     /.snapshots/20260121-0930_root \
+# snapper 会定期生成新快照，直接拿两个相邻的做增量
+sudo btrfs send -p /.snapshots/1/snapshot \
+     /.snapshots/2/snapshot \
      | sudo btrfs receive /mnt/backup
 ```
 
@@ -387,15 +514,13 @@ cat 20260120_root.btrfs | sudo btrfs receive /mnt
 # 如果已有旧 @，先删除
 sudo btrfs subvolume delete /mnt/@
 
-# 重命名，视 btrfs-progs 版本可用以下之一
-sudo btrfs subvolume rename /mnt/20260120-1427_root /mnt/@
-# 或
+# 重命名
 sudo mv /mnt/20260120-1427_root /mnt/@
 ```
 
 ---
 
-## 维护、检查与优化
+## 维护-检查-优化
 
 ### 查看空间使用
 
@@ -416,6 +541,8 @@ sudo btrfs scrub status /
 ```
 
 建议定期执行，尤其是 RAID1/RAID10 环境。发现坏块时，若有多副本，Btrfs 可尝试自愈。
+
+> 单盘无冗余时，scrub 只能**发现**错误，不能修复。
 
 ### balance 重新分布数据
 
@@ -439,7 +566,8 @@ sudo btrfs balance status /
 sudo btrfs filesystem defragment -r -czstd /
 ```
 
-> 注意：`defragment` 可能破坏 CoW 共享，导致快照占用空间增加。对快照较多的系统请谨慎。
+> 注意：`defragment` 可能破坏 CoW 共享，导致快照占用空间增加。对快照较多的系统请谨慎。  
+> 本版使用 nodatacow 的子卷（`/var/log`、`/var/cache`、`/var/tmp`、`/kvm`）不要 defragment。
 
 设置子卷/文件压缩属性：
 
@@ -454,17 +582,17 @@ sudo btrfs property set /path compression zstd
 挂载选项压缩：
 
 ```fstab
-compress=zstd:3
+compress=zstd:1
 ```
 
 ### 只读属性
 
 ```bash
 # 设为只读
-sudo btrfs property set /.snapshots/20260120-1427_root ro true
+sudo btrfs property set /.snapshots/1/snapshot ro true
 
 # 取消只读
-sudo btrfs property set /.snapshots/20260120-1427_root ro false
+sudo btrfs property set /.snapshots/1/snapshot ro false
 ```
 
 ### 设备管理简例
@@ -500,11 +628,12 @@ sudo btrfs subvolume set-default <subvolid> /
 | 查看空间 | `sudo btrfs filesystem df /` |
 | 查看使用率 | `sudo btrfs filesystem usage -h /` |
 | 列出子卷 | `sudo btrfs subvolume list /` |
+| 列出子卷（表格） | `sudo btrfs subvolume list -t /` |
 | 创建子卷 | `sudo btrfs subvolume create /mnt/@` |
 | 创建只读快照 | `sudo btrfs subvolume snapshot -r / /.snapshots/日期_root` |
 | 删除快照 | `sudo btrfs subvolume delete /.snapshots/日期_root` |
 | 查看子卷详情 | `sudo btrfs subvolume show /.snapshots/日期_root` |
-| 挂载快照 | `sudo mount -t btrfs -o subvol=.snapshots/日期_root,ro /dev/nvme0n1p2 /mnt/snap` |
+| 挂载快照 | `sudo mount -t btrfs -o subvol=/@/.snapshots/1/snapshot,ro /dev/nvme0n1p3 /mnt/snap` |
 | 完整发送 | `sudo btrfs send /.snapshots/snap1 \| sudo btrfs receive /mnt/backup` |
 | 增量发送 | `sudo btrfs send -p /.snapshots/snap1 /.snapshots/snap2 \| sudo btrfs receive /mnt/backup` |
 | scrub | `sudo btrfs scrub start -B /` |
@@ -513,6 +642,10 @@ sudo btrfs subvolume set-default <subvolid> /
 | 查看属性 | `sudo btrfs property get /path` |
 | 设置只读 | `sudo btrfs property set /path ro true` |
 | 设置默认子卷 | `sudo btrfs subvolume set-default <subvolid> /` |
+| **snapper 列表** | `sudo snapper -c root list` |
+| **snapper 手动快照** | `sudo snapper -c root create --description "..."` |
+| **snapper 回滚** | `sudo snapper -c root rollback <编号>` |
+| **zram 状态** | `zramctl` / `cat /proc/swaps` |
 
 ---
 
@@ -520,12 +653,13 @@ sudo btrfs subvolume set-default <subvolid> /
 
 | 工具 | 用途 |
 |---|---|
-| `snapper` | openSUSE 系快照管理，支持保留策略 |
-| `snap-pac` | Arch 下配合 pacman，自动在安装/升级前后创建快照 |
+| `snapper` | openSUSE 系快照管理，支持保留策略；本版实际使用 |
+| `snap-pac` | Arch/CachyOS 下配合 pacman，自动在安装/升级前后创建快照；本版实际使用 |
 | `btrbk` | 强大的 Btrfs 快照与 `send/receive` 备份工具 |
 | `timeshift` | 图形化、简单易用，适合桌面用户 |
 | `grub-btrfs` | 在 GRUB 菜单中直接启动到 Btrfs 快照 |
 | `btrfs-assistant` | 图形化管理 Btrfs、snapper、grub-btrfs 等 |
+| `zram-generator` | 自动创建 zram 块设备，CachyOS 默认 |
 
 建议：
 
@@ -537,14 +671,17 @@ sudo btrfs subvolume set-default <subvolid> /
 
 ## 最佳实践与注意事项
 
-- 快照尽量使用只读：`btrfs subvolume snapshot -r`。
+- 快照尽量使用只读：`btrfs subvolume snapshot -r` 或让 snapper 管理。
 - 快照不是备份，重要数据遵循 3-2-1 原则：3 份副本、2 种介质、1 份异地。
-- `.snapshots` 建议作为独立子卷挂载到 `/.snapshots`。
+- **`.snapshots` 由 snapper 作为嵌套子卷自动创建，不写 fstab**。
+- **`/var/log`、`/var/cache`、`/var/tmp`、`/kvm` 使用 `nodatacow`**，避免 CoW 写放大。
+- **`/tmp` 挂 tmpfs，`/var/tmp` 保持 btrfs**（跨重启保留语义）。
+- **zram 优先级高于磁盘 swap**，用 `cat /proc/swaps` 确认。
 - 命名统一：`YYYYMMDD-HHMM_用途`，便于排序和清理。
-- 系统升级、内核更新、重大配置变更前先创建快照。
+- 系统升级、内核更新、重大配置变更前先创建快照（snap-pac 自动做）。
 - 定期 `scrub`，尤其是 RAID 环境。
 - 监控空间：`btrfs filesystem usage -h /`。
-- 谨慎使用 `defragment`，它可能破坏 CoW 共享，增加快照占用。
+- 谨慎使用 `defragment`，它可能破坏 CoW 共享，增加快照占用；nodatacow 子卷不 defrag。
 - `balance` 不要频繁全量运行，按需使用 `-dusage` / `-musage`。
 - 定期测试恢复流程，确保快照和备份真的可用。
 - 删除快照后空间未释放时，检查是否被其他快照引用。
@@ -567,7 +704,7 @@ sudo btrfs subvolume set-default <subvolid> /
 处理：
 
 ```bash
-sudo btrfs property get /.snapshots/快照名
+sudo btrfs property get /.snapshots/1/snapshot
 sudo btrfs subvolume list /mnt/backup
 ```
 
@@ -588,21 +725,21 @@ sudo btrfs filesystem usage -h /
 
 检查：
 
-- `subvol=` 路径是否正确。
-- `.snapshots` 是否为独立子卷。
+- `subvol=` 路径是否正确（snapper 是 `/@/.snapshots/N/snapshot`）。
+- `.snapshots` 是否为独立或嵌套子卷。
 - 设备 UUID 是否正确。
 - 是否只读挂载与当前状态冲突。
 
 ```bash
-lsblk -f
-sudo btrfs subvolume list /mnt
+lsblk -pf
+sudo btrfs subvolume list -t /mnt
 ```
 
 ### 无法删除子卷
 
 可能原因：
 
-- 子卷内还有嵌套子卷。
+- 子卷内还有嵌套子卷（例如 `@/.snapshots`、`@home/.snapshots`）。
 - 路径错误。
 - 文件系统只读。
 
@@ -622,7 +759,7 @@ sudo btrfs filesystem df /
 
 处理方向：
 
-- 删除不需要的快照。
+- 删除不需要的快照（`snapper cleanup`）。
 - 清理日志、缓存、包缓存。
 - 适度 `balance`。
 - 检查是否有异常大文件或快照保留过多。
@@ -634,9 +771,22 @@ sudo btrfs filesystem df /
 - 单盘无冗余时，scrub 只能发现错误，不能修复。
 - 重要数据立即从备份恢复。
 
+### zram 与磁盘 swap 优先级反了
+
+症状：系统频繁写磁盘 swap，而不是先压缩进 zram。
+
+```bash
+cat /proc/swaps
+# 确认 zram0 的 Priority 高于磁盘 swap
+```
+
+修复：调整 `zram-generator.conf` 里的 `zram-size` 或在 fstab 给磁盘 swap 加 `pri=` 选项。
+
 ---
 
 ## 附录-快照脚本示例
+
+> 如果你用 snapper + snap-pac，本节可跳过；下面适合不想引入 snapper 的场景。
 
 ### 创建根与 home 只读快照
 
@@ -706,10 +856,11 @@ sudo systemctl enable --now btrfs-snapshot.timer
 ## 参考与延伸
 
 - [《001_安装_Arch_Linux.md》 → “btrfs 文件系统” 章节](https://gitee.com/wudixianxin/open/blob/main/001_安装_Arch_Linux.md)
-- Arch Wiki：Btrfs
+- Arch Wiki：Btrfs、Snapper、Zram
+- CachyOS Wiki：Btrfs、snapper、zram-generator
 - `man btrfs`、`man btrfs-subvolume`、`man btrfs-send`、`man btrfs-receive`
 - `snapper`、`btrbk`、`timeshift`、`grub-btrfs` 官方文档
 
 ---
 
-希望这份整理补充版对你和看到的人有帮助！欢迎补充/纠错～
+希望这份 CachyOS 实测修订版对你有帮助！主要改动集中在**子卷布局、fstab、snapper 嵌套快照、zram/tmpfs、nodatacow 策略**五块，其余命令和概念可以沿用初版。欢迎补充/纠错～

@@ -108,7 +108,7 @@ virsh dumpxml <虚拟机名> | grep "cpu mode"
 - 型号：Virtio
 - 3d加速：不启用
 
-### TPM（可选）
+### TPM（可选，或者直接删除这个设备）
 
 - 类型：模拟
 - 型号：TIS
@@ -122,7 +122,9 @@ virsh dumpxml <虚拟机名> | grep "cpu mode"
 
 ## 安装过程中的关键操作-加载VirtIO存储驱动
 
-启动虚拟机，正常进入 Windows 10 安装程序。
+点击左上角的 “开始安装”按钮。
+
+启动虚拟机，一直保持快速按下 回车键，正常进入 Windows 10 安装程序。
 
 当进行到 **“你想将 Windows 安装在哪里？”** 步骤时，**磁盘列表会是空的**——因为安装程序看不到 VirtIO 磁盘。
 
@@ -134,21 +136,15 @@ virsh dumpxml <虚拟机名> | grep "cpu mode"
 
    ```
    viostor\w10\amd64\
+
+   或者
+
+   amd64\w10\
    ```
 
    选择并安装 `viostor.inf`。
 
 4. 驱动加载完成后，虚拟磁盘会出现在列表中，即可正常分区和安装。
-
-> [!TIP]
-> **如果 `viostor\w10\amd64` 下加载后仍不显示磁盘**：部分 virtio-win 版本或配置下，SCSI 控制器需要使用 `vioscsi` 驱动。
-> 可以尝试进入 `vioscsi\w10\amd64\` 加载 `vioscsi.inf`。
-> 
-> 两者的区别在于虚拟磁盘暴露给 Windows 的控制器类型：
-> 
-> `viostor` 对应 virtio-blk，`vioscsi` 对应 virtio-scsi。
-> virt-manager 默认的 VirtIO 磁盘总线通常对应 `viostor`，
-> 但如果选择了 SCSI 控制器，则需要 `vioscsi`。
 
 如果此时还想一并加载网卡驱动，可以点击“加载驱动程序” → 浏览到 `NetKVM\w10\amd64\`，加载 `netkvm.inf`，这样系统安装完成后网卡即可立即工作。
 
@@ -168,11 +164,13 @@ virsh dumpxml <虚拟机名> | grep "cpu mode"
 如果 `virtio-win-guest-tools.exe` 因某种原因不可用，可以在设备管理器中找到带黄色感叹号的设备（如“以太网控制器”），
 右键“更新驱动程序” → “浏览计算机以查找驱动程序”，指向 virtio-win 光驱中对应目录：
 
+
 | 设备 | 驱动目录 |
 |---|---|
 | 网卡 | `NetKVM\w10\amd64\` |
 | Balloon（内存气球） | `Balloon\w10\amd64\` |
 | 串口 / 其他 | 对应 `w10\amd64` 子目录 |
+
 
 手动安装网卡驱动时，**不要通过远程桌面操作**——安装过程会更新网卡驱动，可能导致当前网络连接中断。应通过 virt-manager 的图形控制台（SPICE/VNC）操作。
 
@@ -202,6 +200,12 @@ Get-PnpDevice -Status Error, Unknown | Format-Table -AutoSize
 virsh dumpxml <虚拟机名> | grep -i "cpu mode"
 ```
 
+```xml
+  <cpu mode="host-passthrough" check="none" migratable="on">
+    <topology sockets="1" dies="1" clusters="1" cores="4" threads="2"/>
+  </cpu>
+```
+
 ### 启用Hyper-V enlightenments（显著提升 Windows 性能）
 
 目前 KVM / QEMU 默认启动了很多优化特性。
@@ -227,29 +231,31 @@ virsh dumpxml <虚拟机名> | grep -i "cpu mode"
       <vpindex state="on"/>
       <runtime state="on"/>
       <synic state="on"/>
-      <stimer state="on"/>
+      <stimer state="on">
+        <direct state="on"/>
+      </stimer>
       <reset state="on"/>
-      <vendor_id state="on" value="1234567890ab"/>
       <frequencies state="on"/>
       <reenlightenment state="on"/>
       <tlbflush state="on"/>
       <ipi state="on"/>
       <evmcs state="on"/>
-      <avic state="off"/>
+      <avic state="on"/>
     </hyperv>
     <kvm>
       <hidden state="on"/>
     </kvm>
     <vmport state="off"/>
-    <smm state="on"/>
+    <smm state="off"/>
+    <ioapic driver="kvm"/>
   </features>
 ```
 
 > [!TIP]
 > `evmcs` 仅 Intel 平台有效，`avic` 仅 AMD 平台有效。
-> 保留不匹配的项通常无害（可设为 `off` 或直接删除）；若启动报错再删。 
+> 保留不匹配的项通常无害（可设为 `off` 或直接删除）；若启动报错再删。
 > 
-> <smm> 是 Secure Boot 所需；若不启用 Secure Boot 可设为 off，略微减少开销
+> <smm> 是 Secure Boot 所需；若不启用 Secure Boot 可设为 off，略微减少开销。
 > 
 > vendor_id 与 <kvm><hidden> 用于隐藏虚拟化特征（如规避 NVIDIA 驱动检测），与性能无关，无此需求可删除。
 
@@ -275,9 +281,10 @@ virsh dumpxml <vm> | grep -A2 "<clock"
 
 ```xml
   <clock offset="localtime">
-    <timer name="rtc" tickpolicy="catchup"/>
-    <timer name="pit" tickpolicy="delay"/>
+    <timer name="rtc" present="no" tickpolicy="catchup"/>
+    <timer name="pit" present="no" tickpolicy="delay"/>
     <timer name="hpet" present="no"/>
+    <timer name="kvmclock" present="no"/>
     <timer name="hypervclock" present="yes"/>
   </clock>
 ```

@@ -1,6 +1,9 @@
 # Btrfs 实用操作指南（CachyOS 实测修订版）
 
-> 原作者：WuDiXianXin  
+> [!NOTE]
+> By WuDiXianXin
+ 
+> [!TIP]
 > 整理补充：附带目录、常用命令、维护与故障排查  
 > 本版修订：基于 CachyOS / Arch Linux 实际部署（NVMe SSD + Btrfs + snapper + zram），
 > 与一两年前的初版相比，主要在**子卷布局、压缩级别、nodatacow 使用、快照嵌套、tmpfs/zram、挂载选项**上做了对齐。  

@@ -1,5 +1,9 @@
 # Rust 安装与镜像源配置
 
+> [!NOTE]
+> By WuDiXianXin
+
+> [!TIP]
 > 本文覆盖 Rust 安装、rustup 镜像源、Cargo 镜像源、核心组件、VS Code 配置与常用扩展。
 > 构建加速、sccache、cargo-chef 等内容见 `009_Rust_构建加速与缓存配置.md`。
 

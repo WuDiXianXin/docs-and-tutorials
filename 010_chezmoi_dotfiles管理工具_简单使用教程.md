@@ -1,5 +1,8 @@
 # chezmoi 简单使用教程
 
+> [!NOTE]
+> By WuDiXianXin
+
 `chezmoi` 是一个基于 Git 的跨平台 dotfiles 管理工具。它的核心设计是**复制而非符号链接**，并通过强大的模板功能处理不同机器之间的配置差异。
 
 ## 目录

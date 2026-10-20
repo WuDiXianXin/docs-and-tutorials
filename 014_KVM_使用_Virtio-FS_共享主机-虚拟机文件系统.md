@@ -1,5 +1,8 @@
 # KVM 使用 Virtio-FS 共享主机-虚拟机文件系统
 
+> [!NOTE]
+> By WuDiXianXin
+
 Virtio-FS 是专为虚拟机设计的共享文件系统，性能接近本地文件系统。但 Windows 客户机（虚拟机系统）需要额外安装驱动和服务。
 
 ## 目录

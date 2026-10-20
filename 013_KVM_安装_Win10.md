@@ -1,5 +1,8 @@
 # KVM 安装 Win10
 
+> [!NOTE]
+> By WuDiXianXin
+
 > [!IMPORTANT]
 > 核心原则：**能用 VirtIO 就用 VirtIO**。
 > 磁盘和网络使用 VirtIO 驱动，CPU 使用 `host-passthrough` 模式，Windows 10 虚拟机即可获得接近原生的性能体验。

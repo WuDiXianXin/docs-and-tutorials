@@ -1,5 +1,9 @@
 # Rust 构建加速与缓存配置
 
+> [!NOTE]
+> By WuDiXianXin
+
+> [!TIP]
 > 本文覆盖 Cargo profile、增量编译、sccache、cargo-chef 与 CI / Docker 构建缓存。
 > Rust 安装与镜像源配置见 `008_Rust_安装与镜像源配置.md`。
 

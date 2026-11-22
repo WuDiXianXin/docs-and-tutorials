@@ -2,16 +2,16 @@
 
 > [!IMPORTANT]
 > 建议不安装 **Arch Linux**，直接安装 **CachyOS** 更方便和性能更好。
-> 
+>
 > 本文档已经是一两年前的，可能部分内容不符合 **现代化配置**。
-> 
-> 本文的 btrfs 分区配置已过时（在我心里），**现代化配置** 已迁移到文档 [005_btrfs_实用操作指南](./005_btrfs_实用操作指南.md) 中。
+>
+> 本文的 btrfs 分区配置已过时（在我心里），**现代化配置** 已迁移到文档 [005*btrfs*实用操作指南](./005_btrfs_实用操作指南.md) 中。
 
 > [!NOTE]
 > By WuDiXianXin
-> 
->> [!TIP]
->> 参考文章：[泠熙的博客](https://lingxi9374.github.io/posts/教程/archinst/)
+>
+> > [!TIP]
+> > 参考文章：[泠熙的博客](https://lingxi9374.github.io/posts/教程/archinst/)
 
 ---
 
@@ -195,7 +195,7 @@ lsblk
 ```bash
 ❯ lsblk
 NAME        MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
-nvme0n1     259:0    0  1.8T  0 disk 
+nvme0n1     259:0    0  1.8T  0 disk
 ├─nvme0n1p1 259:1    0    1G  0 part /efi
 ├─nvme0n1p2 259:2    0    8G  0 part [SWAP]
 └─nvme0n1p3 259:3    0  1.8T  0 part /home
@@ -209,12 +209,11 @@ nvme0n1     259:0    0  1.8T  0 disk
 
 UEFI + GPT 环境下，至少需 3 个分区，推荐规划如下：
 
-|分区路径|分区类型|文件系统|推荐大小|作用|
-|---|---|---|---|---|
-|/dev/nvme0n1p1（示例）|EFI 系统分区|FAT32|512MB - 1GB|存放 UEFI 引导文件|
-|/dev/nvme0n1p2（示例）|Linux swap 根分区|swap|内存 ≤ 8GB 设为 1.5 倍内存；内存 > 8GB 设为 8GB - 16GB|虚拟内存|
-|/dev/nvme0n1p3（示例）|Linux 分区|ext4/Btrfs|剩余空间（或按需分配）|系统根目录（/）|
-
+| 分区路径               | 分区类型          | 文件系统   | 推荐大小                                               | 作用               |
+| ---------------------- | ----------------- | ---------- | ------------------------------------------------------ | ------------------ |
+| /dev/nvme0n1p1（示例） | EFI 系统分区      | FAT32      | 512MB - 1GB                                            | 存放 UEFI 引导文件 |
+| /dev/nvme0n1p2（示例） | Linux swap 根分区 | swap       | 内存 ≤ 8GB 设为 1.5 倍内存；内存 > 8GB 设为 8GB - 16GB | 虚拟内存           |
+| /dev/nvme0n1p3（示例） | Linux 分区        | ext4/Btrfs | 剩余空间（或按需分配）                                 | 系统根目录（/）    |
 
 ### 6.3 分区工具操作（fdisk）
 
@@ -378,7 +377,7 @@ swapon /dev/nvme0n1p2
 lsblk
 ```
 
-# 七、安装基础系统包
+## 七、安装基础系统包
 
 使用 pacstrap 命令将基础系统包安装到 /mnt（根分区挂载点）。
 
@@ -427,31 +426,31 @@ cat /mnt/etc/fstab
 
 # <file system> <dir> <type> <options> <dump> <pass>
 # /dev/nvme0n1p3
-UUID=73f82c34-fd2b-4ec2-a433-f9d6a194a3a3	/         	btrfs     	rw,noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=/@	0 0
+UUID=73f82c34-fd2b-4ec2-a433-f9d6a194a3a3 /          btrfs      rw,noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=/@ 0 0
 
 # /dev/nvme0n1p3
-UUID=73f82c34-fd2b-4ec2-a433-f9d6a194a3a3	/home     	btrfs     	rw,noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=/@home	0 0
+UUID=73f82c34-fd2b-4ec2-a433-f9d6a194a3a3 /home      btrfs      rw,noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=/@home 0 0
 
 # /dev/nvme0n1p3
-UUID=73f82c34-fd2b-4ec2-a433-f9d6a194a3a3	/var/log  	btrfs     	rw,noatime,nodatacow,noexec,nodev,nosuid,commit=90,space_cache=v2,subvol=/@log	0 0
+UUID=73f82c34-fd2b-4ec2-a433-f9d6a194a3a3 /var/log   btrfs      rw,noatime,nodatacow,noexec,nodev,nosuid,commit=90,space_cache=v2,subvol=/@log 0 0
 
 # /dev/nvme0n1p3
-UUID=73f82c34-fd2b-4ec2-a433-f9d6a194a3a3	/var/cache	btrfs     	rw,noatime,nodatacow,noexec,nodev,nosuid,commit=120,space_cache=v2,subvol=/@cache	0 0
+UUID=73f82c34-fd2b-4ec2-a433-f9d6a194a3a3 /var/cache btrfs      rw,noatime,nodatacow,noexec,nodev,nosuid,commit=120,space_cache=v2,subvol=/@cache 0 0
 
 # /dev/nvme0n1p3
-UUID=73f82c34-fd2b-4ec2-a433-f9d6a194a3a3	/var/tmp  	btrfs     	rw,noatime,nodatacow,noexec,nodev,nosuid,commit=120,space_cache=v2,subvol=/@tmp	0 0
+UUID=73f82c34-fd2b-4ec2-a433-f9d6a194a3a3 /var/tmp   btrfs      rw,noatime,nodatacow,noexec,nodev,nosuid,commit=120,space_cache=v2,subvol=/@tmp 0 0
 
 # /dev/nvme0n1p3
-UUID=73f82c34-fd2b-4ec2-a433-f9d6a194a3a3	/.snapshots	btrfs     	rw,noatime,noexec,nodev,nosuid,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=/@snapshots	0 0
+UUID=73f82c34-fd2b-4ec2-a433-f9d6a194a3a3 /.snapshots btrfs      rw,noatime,noexec,nodev,nosuid,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=/@snapshots 0 0
 
 # /dev/nvme0n1p3
-UUID=73f82c34-fd2b-4ec2-a433-f9d6a194a3a3	/kvm      	btrfs     	rw,noatime,nodatacow,noexec,nodev,nosuid,commit=60,space_cache=v2,subvol=/@kvm	0 0
+UUID=73f82c34-fd2b-4ec2-a433-f9d6a194a3a3 /kvm       btrfs      rw,noatime,nodatacow,noexec,nodev,nosuid,commit=60,space_cache=v2,subvol=/@kvm 0 0
 
 # /dev/nvme0n1p1
-UUID=009B-78CA      	/efi      	vfat      	rw,noatime,nodev,nosuid,noexec,fmask=0022,dmask=0022,iocharset=utf8,shortname=mixed,utf8,errors=remount-ro	0 2
+UUID=009B-78CA       /efi       vfat       rw,noatime,nodev,nosuid,noexec,fmask=0022,dmask=0022,iocharset=utf8,shortname=mixed,utf8,errors=remount-ro 0 2
 
 # /dev/nvme0n1p2
-UUID=66043d54-db9e-42b2-811e-45dea6b74bf7	none      	swap      	defaults  	0 0
+UUID=66043d54-db9e-42b2-811e-45dea6b74bf7 none       swap       defaults   0 0
 ```
 
 务必检查 fstab 文件内容，若有错误，系统开机后无法正常挂载分区，将无法进入系统。
@@ -718,7 +717,7 @@ grub-mkconfig -o /boot/grub/grub.cfg
 
 若为双系统，输出中会显示「Found Windows ...」，说明 Windows 已添加到 GRUB 引导菜单。
 
-# 十一、完成安装并重启
+## 十一、完成安装并重启
 
 所有配置完成后，退出 chroot 环境，重启电脑即可进入新安装的 Arch Linux 系统。
 

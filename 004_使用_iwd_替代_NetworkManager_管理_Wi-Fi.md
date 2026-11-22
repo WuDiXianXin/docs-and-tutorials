@@ -46,7 +46,8 @@ sudo pacman -Rns networkmanager
 paru -Rns networkmanager
 ```
 
-> ⚠️ **注意**：如果桌面环境、VPN 客户端、网络托盘程序等依赖 NetworkManager，卸载后可能失效。卸载前请确认不会破坏系统功能。
+> [!TIP]
+> 如果桌面环境、VPN 客户端、网络托盘程序等依赖 NetworkManager，卸载后可能失效。卸载前请确认不会破坏系统功能。
 
 ## 4. 配置 iwd 和 DNS
 
@@ -93,7 +94,9 @@ ls -l /etc/resolv.conf
 sudo ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
 ```
 
-> 说明：链接到 `stub-resolv.conf` 后，本地程序通常通过 `127.0.0.53` 查询 DNS。若某些特殊程序不兼容，可改用 `/run/systemd/resolve/resolv.conf`，但一般推荐 `stub-resolv.conf`。
+> [!TIP]
+> 链接到 `stub-resolv.conf` 后，本地程序通常通过 `127.0.0.53` 查询 DNS。  
+> 若某些特殊程序不兼容，可改用 `/run/systemd/resolve/resolv.conf`，但一般推荐 `stub-resolv.conf`。
 
 ### 4.4 启用并启动 iwd
 
@@ -188,7 +191,8 @@ sudo systemctl restart iwd
 sudo systemctl disable --now NetworkManager dhcpcd
 ```
 
-> 注意：如果你使用 `systemd-networkd` 管理有线网络，不要直接全局禁用；只需避免它和 iwd 同时管理同一个无线接口。
+> [!TIP]
+> 如果你使用 `systemd-networkd` 管理有线网络，不要直接全局禁用；只需避免它和 iwd 同时管理同一个无线接口。
 
 ### 问题 3：手动写入的 `/etc/resolv.conf` 被覆盖
 

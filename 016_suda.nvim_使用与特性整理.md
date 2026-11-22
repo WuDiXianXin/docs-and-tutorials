@@ -7,12 +7,13 @@
 > 无需 sudo nvim 启动 Neovim，也能安全读写需要 root 权限的文件。
 
 > [!TIP]
-> **[WuDiXianXin/suda.nvim](https://github.com/WuDiXianXin/suda.nvim)** 是 [lambdalisue/vim-suda](https://github.com/lambdalisue/vim-suda) 的 **Neovim 0.12+ 纯 Lua 移植版**，
-> 保留 :SudaRead 、 :SudaWrite 、 suda:// 协议，
-> 同时做了更安全的实现：不走 shell、密码走 stdin、拒绝设备文件、自动处理换行符和编码，
+> **[WuDiXianXin/suda.nvim](https://github.com/WuDiXianXin/suda.nvim)**  
+> 是 [lambdalisue/vim-suda](https://github.com/lambdalisue/vim-suda) 的 **Neovim 0.12+ 纯 Lua 移植版**，  
+> 保留 :SudaRead 、 :SudaWrite 、 suda:// 协议，  
+> 同时做了更安全的实现：不走 shell、密码走 stdin、拒绝设备文件、自动处理换行符和编码，  
 > 并支持 sudo / sudo-rs / doas。
 >
-> 仅支持 `lua` 配置，不支持 `Vim` 配置。
+> 仅支持 `lua` 配置，不支持 `Vim` 配置。  
 > 支持 `Linux`、`MacOS`、`类 Unix` 系统，不支持 `Windows` 系统。
 
 ---
@@ -35,18 +36,18 @@
 
 ### 核心对比
 
-| 方面 | 原版 **vim-suda** | **WuDiXianXin/suda.nvim** |
-|------|-------------------|---------------------------|
-| **语言 / 平台** | Vimscript，支持 Vim + Neovim | 纯 Lua，**仅 Neovim 0.12+** |
-| **命令 / 协议** | `:SudaRead` / `:SudaWrite`、`suda://` | 完全兼容，用法基本一致 |
-| **Smart edit** | `g:suda_smart_edit` | 支持（`smart_edit = true`），默认关闭；实现更保守，也会在 `BufAdd` 时检查 |
-| **提权工具** | 主要 `sudo`（Windows 需额外工具） | `sudo` / `sudo-rs` / `doas` / 自定义 wrapper，自动探测 |
-| **Shell 使用** | 通过 system / 相关机制执行 | **完全不经过 shell**（argv 列表），文件名中的空格、引号、`%`、`#`、`$()` 等更安全 |
-| **密码处理** | 传统方式 | 通过 stdin（`-S`）传递，不进入 argv / 环境变量 |
-| **写入实现** | 原有方式 | Unix 上优先用 `dd` 覆盖（保留 inode、权限、符号链接）；`:w >>` 支持 `dd oflag=append` 或回退到 `tee -a` |
-| **配置方式** | `g:suda#*` 全局变量 | `require('suda').setup({...})` + 兼容旧全局变量 |
-| **额外功能** | 基础 | `:checkhealth suda`、完整 Lua API、测试套件、中英文 README、更详细的编码/BOM/`++bin` 支持 |
-| **维护状态** | 成熟，约 800+ stars，仍有更新 | 新仓库（提交数很少），文档很完善，但生态与使用量还远小于原版 |
+| 方面            | 原版 **vim-suda**                     | **WuDiXianXin/suda.nvim**                                                                               |
+| --------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| **语言 / 平台** | Vimscript，支持 Vim + Neovim          | 纯 Lua，**仅 Neovim 0.12+**                                                                             |
+| **命令 / 协议** | `:SudaRead` / `:SudaWrite`、`suda://` | 完全兼容，用法基本一致                                                                                  |
+| **Smart edit**  | `g:suda_smart_edit`                   | 支持（`smart_edit = true`），默认关闭；实现更保守，也会在 `BufAdd` 时检查                               |
+| **提权工具**    | 主要 `sudo`（Windows 需额外工具）     | `sudo` / `sudo-rs` / `doas` / 自定义 wrapper，自动探测                                                  |
+| **Shell 使用**  | 通过 system / 相关机制执行            | **完全不经过 shell**（argv 列表），文件名中的空格、引号、`%`、`#`、`$()` 等更安全                       |
+| **密码处理**    | 传统方式                              | 通过 stdin（`-S`）传递，不进入 argv / 环境变量                                                          |
+| **写入实现**    | 原有方式                              | Unix 上优先用 `dd` 覆盖（保留 inode、权限、符号链接）；`:w >>` 支持 `dd oflag=append` 或回退到 `tee -a` |
+| **配置方式**    | `g:suda#*` 全局变量                   | `require('suda').setup({...})` + 兼容旧全局变量                                                         |
+| **额外功能**    | 基础                                  | `:checkhealth suda`、完整 Lua API、测试套件、中英文 README、更详细的编码/BOM/`++bin` 支持               |
+| **维护状态**    | 成熟，约 800+ stars，仍有更新         | 新仓库（提交数很少），文档很完善，但生态与使用量还远小于原版                                            |
 
 ---
 
@@ -88,11 +89,11 @@
 
 读取文件时会自动检测三种风格：
 
-| 检测结果 | 对应字符 | 含义 |
-|---------|----------|------|
-| `unix`  | LF (`\n`) | Unix/Linux 风格 |
-| `dos`   | CRLF (`\r\n`) | Windows 风格 |
-| `mac`   | CR (`\r`) | 旧 Macintosh 风格 |
+| 检测结果 | 对应字符      | 含义              |
+| -------- | ------------- | ----------------- |
+| `unix`   | LF (`\n`)     | Unix/Linux 风格   |
+| `dos`    | CRLF (`\r\n`) | Windows 风格      |
+| `mac`    | CR (`\r`)     | 旧 Macintosh 风格 |
 
 具体实现见 `lua/suda/encoding.lua`：
 
@@ -106,8 +107,8 @@
 
 ### 5.2 读取时的特殊处理
 
-1. **`BufReadCmd` 场景**（打开 `suda://` 文件）  
-   - 先检测出 `fileformat`，然后**在执行 `:read` 之前**把 `vim.bo.fileformat` 设为检测结果。  
+1. **`BufReadCmd` 场景**（打开 `suda://` 文件）
+   - 先检测出 `fileformat`，然后**在执行 `:read` 之前**把 `vim.bo.fileformat` 设为检测结果。
    - 这样 Neovim 的 `:read` 能正确按 CRLF / LF 拆行。
 
 2. **旧 Mac（纯 CR）文件的特殊转换**  
@@ -116,7 +117,7 @@
    - 把整个文件读进内存；
    - 把所有 CR 替换成 LF（宽字符编码则按 code unit 替换）；
    - 写到临时文件后再用 `:read` 读入。  
-   同时把原始的 `fileformat=mac` 和 `endofline` 信息保留到 buffer。
+     同时把原始的 `fileformat=mac` 和 `endofline` 信息保留到 buffer。
 
 3. **二进制模式**  
    使用 `++bin` 时会跳过编码和换行符检测/转换，原样读写。
@@ -162,14 +163,14 @@ suda.nvim 则主动做了：
 
 具体行为：
 
-| 文件类型 | 处理结果 |
-|---------|----------|
-| 普通文件 (`file`) | 正常读写 |
-| 指向普通文件的符号链接 | 跟随后按普通文件处理 |
-| 目录 (`directory`) | 报错：`[suda] is a directory: ...` |
+| 文件类型                                            | 处理结果                               |
+| --------------------------------------------------- | -------------------------------------- |
+| 普通文件 (`file`)                                   | 正常读写                               |
+| 指向普通文件的符号链接                              | 跟随后按普通文件处理                   |
+| 目录 (`directory`)                                  | 报错：`[suda] is a directory: ...`     |
 | 字符/块设备（`/dev/null`、`/dev/zero`、磁盘设备等） | 报错：`[suda] not a regular file: ...` |
-| FIFO / 命名管道 | 同上，拒绝 |
-| Socket | 同上，拒绝 |
+| FIFO / 命名管道                                     | 同上，拒绝                             |
+| Socket                                              | 同上，拒绝                             |
 
 检测流程（`path.lua`）：
 
@@ -198,7 +199,9 @@ suda.nvim 则主动做了：
 
 文档明确说明：
 
-> If an ancestor directory is not searchable (for example `/root`), suda cannot tell a missing file from an inaccessible one and does not silently open an empty buffer; use `:SudaWrite` to create a file in such a directory.
+> If an ancestor directory is not searchable (for example `/root`),  
+> suda cannot tell a missing file from an inaccessible one and does not silently open an empty buffer;  
+> use `:SudaWrite` to create a file in such a directory.
 
 #### 情况 C：文件确实不存在
 
@@ -222,14 +225,14 @@ suda.nvim 则主动做了：
 
 ### 6.5 行为总结
 
-| 场景 | 行为 |
-|------|------|
-| 普通 root 文件（如 `/etc/hosts`） | 正常 sudo 读写 |
-| 设备文件 / FIFO / Socket | **明确拒绝**，报错 |
-| `/root` 下不可见的普通文件 | 用提权 `test` 探测后允许操作 |
-| `/root` 下不可见的特殊文件 | 探测到后拒绝 |
-| 父目录不可搜索且无法判断是否存在 | 不静默开空 buffer，需手动 `:SudaWrite` |
-| 权限不足的普通文件 | 通过 `cat`/`dd` + sudo 正常处理 |
+| 场景                              | 行为                                   |
+| --------------------------------- | -------------------------------------- |
+| 普通 root 文件（如 `/etc/hosts`） | 正常 sudo 读写                         |
+| 设备文件 / FIFO / Socket          | **明确拒绝**，报错                     |
+| `/root` 下不可见的普通文件        | 用提权 `test` 探测后允许操作           |
+| `/root` 下不可见的特殊文件        | 探测到后拒绝                           |
+| 父目录不可搜索且无法判断是否存在  | 不静默开空 buffer，需手动 `:SudaWrite` |
+| 权限不足的普通文件                | 通过 `cat`/`dd` + sudo 正常处理        |
 
 整体策略是**保守且明确**：只碰普通文件，对虚拟设备和特殊文件直接拒绝，对权限模糊的路径尽量用提权探测而不是猜测。这比很多简单 sudo 插件更安全。
 
@@ -284,7 +287,9 @@ suda.nvim 则主动做了：
 
 - 命令（`:SudaRead` / `:SudaWrite`）、`suda://` 协议、大部分配置变量都保持兼容，从原版迁过来基本不用改习惯。
 
-**简单总结**：它在「安全、现代 Neovim 体验、细节正确性」这三块比原版和多数同类插件更用心。适合已经用上 Neovim 0.12+、希望插件行为可预期、又在意安全细节的人。唯一需要注意的是项目还比较新，社区使用量和长期验证不如原版 vim-suda，实际踩坑反馈会相对少一些。
+**简单总结**：它在「安全、现代 Neovim 体验、细节正确性」这三块比原版和多数同类插件更用心。  
+适合已经用上 Neovim 0.12+、希望插件行为可预期、又在意安全细节的人。  
+唯一需要注意的是项目还比较新，社区使用量和长期验证不如原版 vim-suda，实际踩坑反馈会相对少一些。
 
 ---
 
@@ -368,16 +373,17 @@ require('suda').setup({ smart_edit = true })
 3. 文档和实现都明确写的是 “Unix-like systems”。
 4. 原版 `vim-suda` 在 Windows 上需要额外装 `mattn/sudo` 或 `gsudo`，而这个 Lua 移植版没有实现对应的 Windows 路径。
 
-即使你装了 [gsudo](https://github.com/gerardog/gsudo) 或 [mattn/sudo](https://github.com/mattn/sudo)，并把 `executable` 设成它们，插件内部仍会调用 `dd`/`cat`，大概率直接失败。
+即使你装了 [gsudo](https://github.com/gerardog/gsudo) 或 [mattn/sudo](https://github.com/mattn/sudo)，  
+并把 `executable` 设成它们，插件内部仍会调用 `dd`/`cat`，大概率直接失败。
 
 #### Windows 上的替代方案
 
-| 方案 | 说明 |
-|------|------|
-| **原版 vim-suda** | 仍支持有限 Windows（配合 gsudo / mattn/sudo） |
-| **gnsfujiwara/suda.nvim** | 另一款 Lua 实现，文档明确提到 Windows + gsudo |
-| **denialofsandwich/sudo.nvim** | 也有 Windows 相关实践 |
-| 直接用管理员权限开 Neovim | 最简单粗暴，但不推荐日常使用 |
+| 方案                           | 说明                                          |
+| ------------------------------ | --------------------------------------------- |
+| **原版 vim-suda**              | 仍支持有限 Windows（配合 gsudo / mattn/sudo） |
+| **gnsfujiwara/suda.nvim**      | 另一款 Lua 实现，文档明确提到 Windows + gsudo |
+| **denialofsandwich/sudo.nvim** | 也有 Windows 相关实践                         |
+| 直接用管理员权限开 Neovim      | 最简单粗暴，但不推荐日常使用                  |
 
 如果必须在 Windows 上用类似功能，更现实的选择是：
 
@@ -395,11 +401,11 @@ require('suda').setup({ smart_edit = true })
 
 ### 8.3 快速对照
 
-| 平台 | 支持情况 | 额外依赖 | 推荐配置 |
-|------|----------|----------|----------|
-| **macOS** | ✅ 完整支持 | 系统自带即可 | `smart_edit = true` |
-| **Linux** | ✅ 完整支持 | 系统自带即可 | 同上 |
-| **Windows** | ❌ 不支持 | 即使装 gsudo 也难用 | 换其他插件或原版 vim-suda |
+| 平台        | 支持情况    | 额外依赖            | 推荐配置                  |
+| ----------- | ----------- | ------------------- | ------------------------- |
+| **macOS**   | ✅ 完整支持 | 系统自带即可        | `smart_edit = true`       |
+| **Linux**   | ✅ 完整支持 | 系统自带即可        | 同上                      |
+| **Windows** | ❌ 不支持   | 即使装 gsudo 也难用 | 换其他插件或原版 vim-suda |
 
 **总结**：在 Mac 上直接按 Linux 方式安装使用即可；在 Windows 上目前不建议用这个插件，换支持 Windows 的替代品更省事。
 
@@ -444,11 +450,11 @@ require('suda').setup({ smart_edit = true })
 
 开启后大致会：
 
-| 行为 | 说明 |
-|------|------|
-| 不转换换行符 | 不把 CRLF/CR 当成行尾去“规范化” |
-| 弱化/跳过编码转换 | 少做字符集转换，更接近原始字节 |
-| 常配合 `binary` 选项 | 避免把文件当纯文本乱改 |
+| 行为                 | 说明                            |
+| -------------------- | ------------------------------- |
+| 不转换换行符         | 不把 CRLF/CR 当成行尾去“规范化” |
+| 弱化/跳过编码转换    | 少做字符集转换，更接近原始字节  |
+| 常配合 `binary` 选项 | 避免把文件当纯文本乱改          |
 
 适合：可执行文件、图片、压缩包、带任意字节的数据文件等。  
 suda 文档也写了：用 `++bin` 时会跳过编码和换行符的自动转换。
@@ -464,16 +470,16 @@ suda 文档也写了：用 `++bin` 时会跳过编码和换行符的自动转换
 ```
 
 - `++enc` → 字符编码（UTF-8、GBK、Latin-1…）
-- `++ff`  → 换行符风格（dos/unix/mac）
+- `++ff` → 换行符风格（dos/unix/mac）
 - `++bin` → 整文件当二进制，少做上述文本转换
 
 ### 9.4 小结
 
-| 写法 | 含义 |
-|------|------|
-| `++enc=utf-8` | 按 UTF-8 读写 |
-| `++enc=latin1` | 按 Latin-1 读写 |
-| `++bin` | 二进制模式，不做编码/换行转换 |
-| `++ff=dos` | 按 CRLF 处理换行 |
+| 写法           | 含义                          |
+| -------------- | ----------------------------- |
+| `++enc=utf-8`  | 按 UTF-8 读写                 |
+| `++enc=latin1` | 按 Latin-1 读写               |
+| `++bin`        | 二进制模式，不做编码/换行转换 |
+| `++ff=dos`     | 按 CRLF 处理换行              |
 
 在 suda 里用法和普通 `:edit` / `:read` 一样，只是路径可以写成 `suda://...`。

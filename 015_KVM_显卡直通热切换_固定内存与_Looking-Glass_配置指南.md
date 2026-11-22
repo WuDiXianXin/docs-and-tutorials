@@ -8,7 +8,7 @@
 - [热切换显卡直通和固定内存](#热切换显卡直通和固定内存)
 - [开启虚拟机前](#开启虚拟机前)
 - [关闭虚拟机后](#关闭虚拟机后)
-- [Looking Glass](#Looking-Glass)
+- [Looking Glass](#looking-glass)
 
 ## 热切换显卡直通和固定内存
 
@@ -248,7 +248,7 @@ sudo sysctl -w vm.nr_hugepages=0
 cat /proc/sys/vm/nr_hugepages
 ```
 
-## Looking-Glass
+## looking-glass
 
 > [!IMPORTANT]
 > Looking Glass 不用显卡直通也能使用，但性能不如显卡直通高。
@@ -258,7 +258,8 @@ cat /proc/sys/vm/nr_hugepages
 >
 > 安装 Looking Glass 前，需要一个虚拟显卡（qxl 或 virtio 都行，建议 virtio），以便进入 virt-manager 虚拟机系统界面。
 >
-> 安装 Looking Glass 后，virt-manager 虚拟机系统界面可能黑屏；此时不要担心，在 Linux 主机上打开终端并执行 `looking-glass-client` 后，会打开一个窗口用于显示 Windows 10/11 虚拟机界面。
+> 安装 Looking Glass 后，virt-manager 虚拟机系统界面可能黑屏；  
+> 此时不要担心，在 Linux 主机上打开终端并执行 `looking-glass-client` 后，会打开一个窗口用于显示 Windows 10/11 虚拟机界面。
 
 ### 安装配置 Looking Glass
 
@@ -330,76 +331,75 @@ sudo make install
 
 KVMFR 模块的源码位于下载的源码包中的 `module/` 目录。
 
-**1. 通过 DKMS 安装模块**
+1. 通过 DKMS 安装模块
 
-使用 DKMS 可以确保在内核升级后模块自动重新编译。
+   使用 DKMS 可以确保在内核升级后模块自动重新编译。
 
-```bash
-cd ~/build/looking-glass-B7-829-cdba29f2/module/
-sudo dkms install "."
-```
+   ```bash
+   cd ~/build/looking-glass-B7-829-cdba29f2/module/
+   sudo dkms install "."
+   ```
 
-**2. 配置模块加载参数**
+2. 配置模块加载参数
 
-需要根据计划使用的最大分辨率，通过 `static_size_mb` 参数为 KVMFR 分配共享内存。常见配置如下：
+   需要根据计划使用的最大分辨率，通过 `static_size_mb` 参数为 KVMFR 分配共享内存。常见配置如下：
+   - 1080p / 1440p（SDR）：`static_size_mb=32`
+   - 4K（SDR）：`static_size_mb=128`
 
-- 1080p / 1440p（SDR）：`static_size_mb=32`
-- 4K（SDR）：`static_size_mb=128`
+   创建或编辑 `/etc/modprobe.d/kvmfr.conf`，写入你的选择。以 1080p 为例：
 
-创建或编辑 `/etc/modprobe.d/kvmfr.conf`，写入你的选择。以 1080p 为例：
+   ```txt
+   options kvmfr static_size_mb=32
+   ```
 
-```txt
-options kvmfr static_size_mb=32
-```
+3. 设置开机自动加载
 
-**3. 设置开机自动加载**
+   创建 `/etc/modules-load.d/kvmfr.conf`，使系统启动时自动加载模块：
 
-创建 `/etc/modules-load.d/kvmfr.conf`，使系统启动时自动加载模块：
+   ```txt
+   kvmfr
+   ```
 
-```txt
-kvmfr
-```
+4. 配置设备权限（CachyOS 关键点）
 
-**4. 配置设备权限（CachyOS 关键点）**
+   在现代 CachyOS/Arch 系统上，旧的 `OWNER` udev 规则会失效。正确做法是只依靠 `GROUP` 来授权，并确保你的用户属于该组。
 
-在现代 CachyOS/Arch 系统上，旧的 `OWNER` udev 规则会失效。正确做法是只依靠 `GROUP` 来授权，并确保你的用户属于该组。
+   创建 udev 规则 `/etc/udev/rules.d/70-kvmfr.rules`：
 
-创建 udev 规则 `/etc/udev/rules.d/70-kvmfr.rules`：
+   ```txt
+   SUBSYSTEM=="kvmfr", GROUP="kvm", MODE="0660", TAG+="uaccess"
+   ```
 
-```txt
-SUBSYSTEM=="kvmfr", GROUP="kvm", MODE="0660", TAG+="uaccess"
-```
+   将你的用户加入 `kvm` 组：
 
-将你的用户加入 `kvm` 组：
+   ```bash
+   sudo usermod -aG kvm $USER
+   ```
 
-```bash
-sudo usermod -aG kvm $USER
-```
+   > [!NOTE]
+   > 此更改需要重新登录或重启才能生效。
 
-> [!NOTE]
-> 此更改需要重新登录或重启才能生效。
+5. 加载模块并验证
 
-**5. 加载模块并验证**
+   完成配置后，可以重启系统，或者手动加载模块：
 
-完成配置后，可以重启系统，或者手动加载模块：
+   ```bash
+   sudo modprobe kvmfr
+   ```
 
-```bash
-sudo modprobe kvmfr
-```
+   验证设备节点是否正确创建：
 
-验证设备节点是否正确创建：
+   ```bash
+   sudo ls -l /dev/kvmfr0
+   ```
 
-```bash
-sudo ls -l /dev/kvmfr0
-```
+   成功的输出应该类似：
 
-成功的输出应该类似：
+   ```txt
+   crw-rw----+ 1 root kvm 510, 0 10月19日 11:47 /dev/kvmfr0
+   ```
 
-```txt
-crw-rw----+ 1 root kvm 510, 0 10月19日 11:47 /dev/kvmfr0
-```
-
-权限以 `c` 开头（字符设备），且组为 `kvm`。
+   权限以 `c` 开头（字符设备），且组为 `kvm`。
 
 #### 配置虚拟机与客户机
 
@@ -407,36 +407,35 @@ crw-rw----+ 1 root kvm 510, 0 10月19日 11:47 /dev/kvmfr0
 
 1. **配置虚拟机 XML**
 
-使用 `virsh edit <虚拟机名>` 编辑虚拟机 XML，将 `/dev/kvmfr0` 作为 IVSHMEM 的后端挂载给虚拟机。
+   使用 `virsh edit <虚拟机名>` 编辑虚拟机 XML，将 `/dev/kvmfr0` 作为 IVSHMEM 的后端挂载给虚拟机。
 
-`size` 参数必须与 `static_size_mb` 的值完全一致。例如：
+   `size` 参数必须与 `static_size_mb` 的值完全一致。例如：
+   - 32 MiB = `33554432` 字节
+   - 128 MiB = `134217728` 字节
 
-- 32 MiB = `33554432` 字节
-- 128 MiB = `134217728` 字节
+   ```xml
+   <qemu:commandline>
+   <qemu:arg value='-device'/>
+   <qemu:arg value='{"driver":"ivshmem-plain","memdev":"looking-glass","id":"shmem0"}'/>
+   <qemu:arg value='-object'/>
+   <qemu:arg value='{"qom-type":"memory-backend-file","id":"looking-glass","mem-path":"/dev/kvmfr0","share":true,"size":33554432}'/>
+   </qemu:commandline>
+   ```
 
-```xml
-<qemu:commandline>
-  <qemu:arg value='-device'/>
-  <qemu:arg value='{"driver":"ivshmem-plain","memdev":"looking-glass","id":"shmem0"}'/>
-  <qemu:arg value='-object'/>
-  <qemu:arg value='{"qom-type":"memory-backend-file","id":"looking-glass","mem-path":"/dev/kvmfr0","share":true,"size":33554432}'/>
-</qemu:commandline>
-```
+   或者使用下面这种写法（virt-manager 可能会把上面的转换成下面的形式）：
 
-或者使用下面这种写法（virt-manager 可能会把上面的转换成下面的形式）：
-
-```xml
-<qemu:commandline>
-  <qemu:arg value="-device"/>
-  <qemu:arg value="{&quot;driver&quot;:&quot;ivshmem-plain&quot;,&quot;memdev&quot;:&quot;looking-glass&quot;,&quot;id&quot;:&quot;shmem0&quot;}"/>
-  <qemu:arg value="-object"/>
-  <qemu:arg value="{&quot;qom-type&quot;:&quot;memory-backend-file&quot;,&quot;id&quot;:&quot;looking-glass&quot;,&quot;mem-path&quot;:&quot;/dev/kvmfr0&quot;,&quot;share&quot;:true,&quot;size&quot;:33554432}"/>
-</qemu:commandline>
-```
+   ```xml
+   <qemu:commandline>
+   <qemu:arg value="-device"/>
+   <qemu:arg value="{&quot;driver&quot;:&quot;ivshmem-plain&quot;,&quot;memdev&quot;:&quot;looking-glass&quot;,&quot;id&quot;:&quot;shmem0&quot;}"/>
+   <qemu:arg value="-object"/>
+   <qemu:arg value="{&quot;qom-type&quot;:&quot;memory-backend-file&quot;,&quot;id&quot;:&quot;looking-glass&quot;,&quot;mem-path&quot;:&quot;/dev/kvmfr0&quot;,&quot;share&quot;:true,&quot;size&quot;:33554432}"/>
+   </qemu:commandline>
+   ```
 
 2. **Windows 客户机**
 
-在 Windows 内安装与 B7-dev 源码包版本匹配的 Looking Glass IDD。安装过程中确保勾选 IVSHMEM 驱动。
+   在 Windows 内安装与 B7-dev 源码包版本匹配的 Looking Glass IDD。安装过程中确保勾选 IVSHMEM 驱动。
 
 ### 配置检查与排错
 
@@ -485,7 +484,8 @@ kvmfr
 
 该规则高度依赖于 systemd 版本。Arch Linux 和 CachyOS 用户可以放心使用。
 
-`TAG+="uaccess"` 写法是针对 systemd 258 及以上版本的推荐方案。从该版本开始，`systemd-udevd` 会忽略 udev 规则中为非系统用户/组设置的 `OWNER`/`GROUP`，转而使用 `uaccess` 标签来动态地将设备权限分配给当前登录的桌面用户。
+`TAG+="uaccess"` 写法是针对 systemd 258 及以上版本的推荐方案。  
+从该版本开始，`systemd-udevd` 会忽略 udev 规则中为非系统用户/组设置的 `OWNER`/`GROUP`，转而使用 `uaccess` 标签来动态地将设备权限分配给当前登录的桌面用户。
 
 将规则文件命名为 `70-kvmfr.rules` 也是正确的。因为 `uaccess` 标签由 `73-seat-late.rules` 处理，规则文件名序号 70 必须小于 73，才能确保在 `uaccess` 处理之前生效。
 
@@ -496,45 +496,44 @@ kvmfr
 
 1. **重新加载并触发规则**
 
-```bash
-sudo udevadm control --reload-rules
-sudo udevadm trigger
-```
+   ```bash
+   sudo udevadm control --reload-rules
+   sudo udevadm trigger
+   ```
 
-这会让新的 udev 规则立即生效，无需重启。
+   这会让新的 udev 规则立即生效，无需重启。
 
 2. **检查模块是否加载**
 
-```bash
-lsmod | grep kvmfr
+   ```bash
+   lsmod | grep kvmfr
+    # 或以下命令
+    dmesg | rg kvmfr
+   ```
 
-# 或以下命令
-dmesg | rg kvmfr
-```
-
-如果看到 `kvmfr` 模块，说明已加载。
+   如果看到 `kvmfr` 模块，说明已加载。
 
 3. **检查设备节点**
 
-```bash
-ls -l /dev/kvmfr0
-```
+   ```bash
+   ls -l /dev/kvmfr0
+   ```
 
-应该能看到一个字符设备，行首为 `c`。其权限和所有者应反映 udev 规则的结果。
+   应该能看到一个字符设备，行首为 `c`。其权限和所有者应反映 udev 规则的结果。
 
-如果看到的是一个普通文件，或大小不为 0，说明模块可能在 QEMU 启动之后才加载。此时需要删除该文件并重新加载模块。
+   如果看到的是一个普通文件，或大小不为 0，说明模块可能在 QEMU 启动之后才加载。此时需要删除该文件并重新加载模块。
 
 4. **查看内核日志**
 
-```bash
-dmesg | grep kvmfr
+   ```bash
+   dmesg | grep kvmfr
 
-# 或以下命令
-dmesg | rg kvmfr
-```
+   # 或以下命令
+   dmesg | rg kvmfr
+   ```
 
-如果配置成功，日志中应出现类似以下信息：
+   如果配置成功，日志中应出现类似以下信息：
 
-```txt
-kvmfr: creating 1 static devices
-```
+   ```txt
+   kvmfr: creating 1 static devices
+   ```

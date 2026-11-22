@@ -5,14 +5,6 @@
 
 Virtio-FS 是专为虚拟机设计的共享文件系统，性能接近本地文件系统。但 Windows 客户机（虚拟机系统）需要额外安装驱动和服务。
 
-## 目录
-
-- [主机端配置](#主机端配置)
-- [Windows 10 虚拟机端配置](#Windows10虚拟机端配置)
-- [理解 Target Path](#理解Target-Path)
-- [Btrfs 重要优化：关闭 CoW](#Btrfs重要优化--关闭CoW)
-- [相关链接](#相关链接)
-
 ## 主机端配置
 
 1. **关闭虚拟机**。
@@ -74,10 +66,10 @@ Virtio-FS 是专为虚拟机设计的共享文件系统，性能接近本地文�
 
 可以这样对应理解：
 
-| virt-manager 字段 | 实际含义 | 例子 |
-|---|---|---|
-| Source Path | 主机 Linux 上真实要共享的目录 | `/home/你的用户名/vm-share` |
-| Target Path | Virtio-FS 的挂载标签，随便起名，但要和客户机挂载时一致 | `share_tag` |
+| virt-manager 字段 | 实际含义                                               | 例子                        |
+| ----------------- | ------------------------------------------------------ | --------------------------- |
+| Source Path       | 主机 Linux 上真实要共享的目录                          | `/home/你的用户名/vm-share` |
+| Target Path       | Virtio-FS 的挂载标签，随便起名，但要和客户机挂载时一致 | `share_tag`                 |
 
 也就是说：
 
@@ -99,7 +91,8 @@ Target Path: share_tag
 sudo mount -t virtiofs share_tag /mnt/share
 ```
 
-如果是 Windows 客户机，安装好 WinFsp 和 `virtio-win-guest-tools` 后，Virtio-FS 服务会识别这个标签，通常会把它映射成一个盘符，比如 `Z:`。如果手动配置，也是指定 `share_tag` 这个标签，而不是指定主机路径。
+如果是 Windows 客户机，安装好 WinFsp 和 `virtio-win-guest-tools` 后，Virtio-FS 服务会识别这个标签，通常会把它映射成一个盘符，比如 `Z:`。  
+如果手动配置，也是指定 `share_tag` 这个标签，而不是指定主机路径。
 
 命名建议：
 

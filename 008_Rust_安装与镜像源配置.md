@@ -4,7 +4,7 @@
 > By WuDiXianXin
 
 > [!TIP]
-> 本文覆盖 Rust 安装、rustup 镜像源、Cargo 镜像源、核心组件、VS Code 配置与常用扩展。
+> 本文覆盖 Rust 安装、rustup 镜像源、Cargo 镜像源、核心组件、VS Code 配置与常用扩展。  
 > 构建加速、sccache、cargo-chef 等内容见 `009_Rust_构建加速与缓存配置.md`。
 
 ## 一、镜像源配置（国内推荐 RsProxy）
@@ -153,13 +153,13 @@ rustup default nightly
 
 以下组件需手动安装，部分依赖特定工具链，例如 `miri` 需要 nightly。
 
-| 组件用途 | 安装命令 | 说明 |
-| --- | --- | --- |
-| 现代语言服务器 | `rustup component add rust-analyzer` | 为 IDE 提供补全、跳转等功能，替代 RLS |
-| Rust 标准库源代码 | `rustup component add rust-src` | 提升 Rust 开发体验，尤其是 IDE 集成 |
-| GDB 调试适配 | `rustup component add rust-gdb` | 配合 GDB 调试 Rust 程序 |
-| LLDB 调试适配 | `rustup component add rust-lldb` | 配合 LLDB 调试 Rust 程序，macOS 推荐 |
-| 内存安全调试器 | `rustup component add miri` | 需切换到 nightly 工具链 |
+| 组件用途          | 安装命令                             | 说明                                  |
+| ----------------- | ------------------------------------ | ------------------------------------- |
+| 现代语言服务器    | `rustup component add rust-analyzer` | 为 IDE 提供补全、跳转等功能，替代 RLS |
+| Rust 标准库源代码 | `rustup component add rust-src`      | 提升 Rust 开发体验，尤其是 IDE 集成   |
+| GDB 调试适配      | `rustup component add rust-gdb`      | 配合 GDB 调试 Rust 程序               |
+| LLDB 调试适配     | `rustup component add rust-lldb`     | 配合 LLDB 调试 Rust 程序，macOS 推荐  |
+| 内存安全调试器    | `rustup component add miri`          | 需切换到 nightly 工具链               |
 
 注意：
 
@@ -190,13 +190,13 @@ code --install-extension belfz.search-crates-io
 
 通过 `cargo install` 安装扩展工具。安装前需确保系统具备基础编译依赖，例如 Linux 的 `build-essential`、`libssl-dev`，macOS 的 Xcode Command Line Tools。
 
-| 工具用途 | 安装命令 | 常用场景 |
-| --- | --- | --- |
-| Docker 构建优化 | `cargo install cargo-chef` | 加速 Rust 项目的 Docker 镜像构建 |
-| Tauri 桌面应用开发 | `cargo install create-tauri-app tauri-cli` | 创建跨平台桌面应用 |
-| 依赖管理便捷工具 | `cargo install cargo-edit` | 使用 `cargo add` 直接修改 `Cargo.toml` |
-| 检查依赖更新 | `cargo install cargo-outdated` | 查看可更新的依赖 |
-| 批量更新子命令 | `cargo install cargo-update` | 一键更新所有已安装的子命令 |
+| 工具用途           | 安装命令                                   | 常用场景                               |
+| ------------------ | ------------------------------------------ | -------------------------------------- |
+| Docker 构建优化    | `cargo install cargo-chef`                 | 加速 Rust 项目的 Docker 镜像构建       |
+| Tauri 桌面应用开发 | `cargo install create-tauri-app tauri-cli` | 创建跨平台桌面应用                     |
+| 依赖管理便捷工具   | `cargo install cargo-edit`                 | 使用 `cargo add` 直接修改 `Cargo.toml` |
+| 检查依赖更新       | `cargo install cargo-outdated`             | 查看可更新的依赖                       |
+| 批量更新子命令     | `cargo install cargo-update`               | 一键更新所有已安装的子命令             |
 
 注意：
 

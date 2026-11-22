@@ -3,7 +3,7 @@
 将 Wallpaper Engine 风格的动态壁纸带到 Linux！这个项目允许你直接在桌面上运行 Steam 的 Wallpaper Engine 动画壁纸。
 
 > [!WARNING]
-> ⚠️ 这是一个从教育项目演变成的基于 OpenGL 的 Linux 壁纸引擎。可能会有一些限制和奇怪的行为！
+> 这是一个从教育项目演变成的基于 OpenGL 的 Linux 壁纸引擎。可能会有一些限制和奇怪的行为！
 
 ---
 
@@ -271,28 +271,28 @@ linux-wallpaperengine [options] <background_id or path>
 
 ### 常见选项
 
-| 选项 | 描述 |
-| --- | --- |
-| `--silent` | 静音背景音频 |
-| `--volume <val>` | 设置音频音量 |
-| `--noautomute` | 其它应用程序播放音频时不要自动静音 |
-| `--no-audio-processing` | 禁用音频响应功能 |
-| `--fps <val>` | 限制帧率 |
-| `--window <XxYxWxH>` | 以自定义大小/位置在窗口模式下运行 |
-| `--screen-root <screen>` | 设置为特定屏幕的背景 |
-| `--screen-span <screen-1>,<screen-2>,...` | 将单个壁纸拉伸到多个屏幕 |
-| `--bg <id/path>` | 将背景分配给特定屏幕，需配合 `--screen-root` 或 `--screen-span` 使用 |
-| `--scaling <mode>` | 壁纸缩放：`stretch`、`fit`、`fill` 或 `default` |
-| `--clamping <mode>` | 设置纹理锁定：`clamp`、`border`、`repeat` |
-| `--assets-dir <path>` | 设置 assets 的自定义路径 |
-| `--screenshot <file>` | 保存屏幕截图（PNG、JPEG、BMP） |
-| `--list-properties` | 显示壁纸的可定制属性 |
-| `--set-property name=value` | 覆盖特定属性 |
-| `--disable-mouse` | 禁用鼠标交互 |
-| `--disable-parallax` | 禁用支持视差效果的背景 |
-| `--no-fullscreen-pause` | 全屏应用运行时防止暂停 |
-| `--fullscreen-pause-only-active` | 仅 Wayland：仅当有活动全屏窗口时暂停 |
-| `--fullscreen-pause-ignore-appid <val>` | 仅 Wayland：忽略 `app_id` 包含 `<val>` 的全屏窗口，可重复使用 |
+| 选项                                      | 描述                                                                 |
+| ----------------------------------------- | -------------------------------------------------------------------- |
+| `--silent`                                | 静音背景音频                                                         |
+| `--volume <val>`                          | 设置音频音量                                                         |
+| `--noautomute`                            | 其它应用程序播放音频时不要自动静音                                   |
+| `--no-audio-processing`                   | 禁用音频响应功能                                                     |
+| `--fps <val>`                             | 限制帧率                                                             |
+| `--window <XxYxWxH>`                      | 以自定义大小/位置在窗口模式下运行                                    |
+| `--screen-root <screen>`                  | 设置为特定屏幕的背景                                                 |
+| `--screen-span <screen-1>,<screen-2>,...` | 将单个壁纸拉伸到多个屏幕                                             |
+| `--bg <id/path>`                          | 将背景分配给特定屏幕，需配合 `--screen-root` 或 `--screen-span` 使用 |
+| `--scaling <mode>`                        | 壁纸缩放：`stretch`、`fit`、`fill` 或 `default`                      |
+| `--clamping <mode>`                       | 设置纹理锁定：`clamp`、`border`、`repeat`                            |
+| `--assets-dir <path>`                     | 设置 assets 的自定义路径                                             |
+| `--screenshot <file>`                     | 保存屏幕截图（PNG、JPEG、BMP）                                       |
+| `--list-properties`                       | 显示壁纸的可定制属性                                                 |
+| `--set-property name=value`               | 覆盖特定属性                                                         |
+| `--disable-mouse`                         | 禁用鼠标交互                                                         |
+| `--disable-parallax`                      | 禁用支持视差效果的背景                                               |
+| `--no-fullscreen-pause`                   | 全屏应用运行时防止暂停                                               |
+| `--fullscreen-pause-only-active`          | 仅 Wayland：仅当有活动全屏窗口时暂停                                 |
+| `--fullscreen-pause-ignore-appid <val>`   | 仅 Wayland：忽略 `app_id` 包含 `<val>` 的全屏窗口，可重复使用        |
 
 ### 用法示例
 
@@ -428,7 +428,7 @@ rm ~/.local/bin/wallpaperengine
 ## 示例背景
 
 项目网站展示页：  
-https://wpengine.alma.mu/#showcase
+<https://wpengine.alma.mu/#showcase>
 
 ---
 

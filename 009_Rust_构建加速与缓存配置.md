@@ -4,18 +4,18 @@
 > By WuDiXianXin
 
 > [!TIP]
-> 本文覆盖 Cargo profile、增量编译、sccache、cargo-chef 与 CI / Docker 构建缓存。
+> 本文覆盖 Cargo profile、增量编译、sccache、cargo-chef 与 CI / Docker 构建缓存。  
 > Rust 安装与镜像源配置见 `008_Rust_安装与镜像源配置.md`。
 
 ## 一、加速手段概览
 
-| 手段 | 作用 | 适用场景 |
-| --- | --- | --- |
-| Cargo profile | 控制优化级别、调试信息、增量编译等 | 所有项目 |
-| 增量编译 | 只重新编译发生变化的部分 | 本地开发 |
-| sccache | 缓存编译结果，跨项目 / 跨 CI 复用 | 本地 / CI |
-| cargo-chef | 缓存 Docker / CI 中的依赖层 | Docker / CI |
-| LTO / codegen-units | 控制发布构建优化 | release |
+| 手段                | 作用                               | 适用场景    |
+| ------------------- | ---------------------------------- | ----------- |
+| Cargo profile       | 控制优化级别、调试信息、增量编译等 | 所有项目    |
+| 增量编译            | 只重新编译发生变化的部分           | 本地开发    |
+| sccache             | 缓存编译结果，跨项目 / 跨 CI 复用  | 本地 / CI   |
+| cargo-chef          | 缓存 Docker / CI 中的依赖层        | Docker / CI |
+| LTO / codegen-units | 控制发布构建优化                   | release     |
 
 本地开发优先关注：
 
@@ -245,12 +245,12 @@ RUN cargo build --release
 
 ## 五、推荐组合
 
-| 场景 | 推荐配置 |
-| --- | --- |
-| 本地开发 | `profile.dev` + `incremental = true` + `sccache` |
-| CI 构建 | `sccache` + 缓存目录 + `profile.release` |
-| Docker 构建 | `cargo-chef` + `sccache` + `profile.release` |
-| 最终发布 | `profile.release` + `lto = "thin"` 或 `lto = "fat"` + `strip = true` |
+| 场景        | 推荐配置                                                             |
+| ----------- | -------------------------------------------------------------------- |
+| 本地开发    | `profile.dev` + `incremental = true` + `sccache`                     |
+| CI 构建     | `sccache` + 缓存目录 + `profile.release`                             |
+| Docker 构建 | `cargo-chef` + `sccache` + `profile.release`                         |
+| 最终发布    | `profile.release` + `lto = "thin"` 或 `lto = "fat"` + `strip = true` |
 
 ## 六、常见问题
 

@@ -2,7 +2,7 @@
 
 > [!IMPORTANT]
 > 建议不安装 **Arch Linux**，直接安装 **CachyOS** 更方便和性能更好。
-> 
+>
 > 本文档已经是一两年前的，可能部分内容不符合 **现代化配置**。
 
 > [!NOTE]
@@ -49,7 +49,8 @@ nmcli device
 ```
 
 示例输出（需记录无线网卡设备名，如 `wlp0s20f3`）：
-```
+
+```txt
 DEVICE      TYPE      STATE        CONNECTION
 wlp0s20f3   wifi      disconnected  --
 eth0        ethernet  unavailable  --
@@ -179,6 +180,7 @@ dkms 版驱动会在内核更新后自动重新编译，避免驱动失效，推
 ### 3.1 前置要求
 
 确保已安装对应内核的头文件（内核头文件版本需与当前运行内核一致）：
+
 ```bash
 # 查看当前内核版本
 uname -r
@@ -195,6 +197,7 @@ sudo nano /etc/pacman.conf
 ```
 
 取消以下两行注释（移除行首的 #）：
+
 ```ini
 [multilib]
 Include = /etc/pacman.d/mirrorlist
@@ -208,7 +211,8 @@ nvidia-settings nvidia-prime lib32-nvidia-utils \
 mesa vulkan-icd-loader
 ```
 
-> 注意：
+> [!TIP]
+>
 > - 无需单独安装 nvidia、nvidia-drm、nvidia-modeset 等包，nvidia-open-dkms 已包含；
 > - nvidia-prime 用于笔记本切换核显/独显；
 > - lib32-nvidia-utils 为 32 位程序（如部分游戏）提供显卡支持。
@@ -222,12 +226,14 @@ reboot
 ### 3.5 验证驱动安装
 
 重启后执行以下命令，输出 NVIDIA 显卡信息则说明安装成功：
+
 ```bash
 nvidia-smi
 ```
 
 示例输出（核心信息）：
-```
+
+```txt
 Fri Dec 12 17:35:24 2025
 +-----------------------------------------------------------------------------------------+
 | NVIDIA-SMI 580.105.08             Driver Version: 580.105.08     CUDA Version: 13.0     |
@@ -303,6 +309,7 @@ nano $HOME/.local/share/fcitx5/rime/default.custom.yaml
 ```
 
 在文件中添加以下内容（启用雾凇预设）：
+
 ```yaml
 patch:
   # 导入雾凇输入法默认预设（核心配置）
@@ -313,16 +320,22 @@ patch:
 ```
 
 ### 5.3 配置 Wayland/X11 环境变量（关键）
-输入法需配置环境变量才能被应用识别，**核心变量通用适配 X11/XWayland/Wayland**，但 `GTK_IM_MODULE`/`QT_IM_MODULE` 需按 Wayland 合成器（如 Hyprland/KDE/GNOME）差异化配置（官方不推荐全局设置 `GTK_IM_MODULE`，避免兼容问题）。
+
+输入法需配置环境变量才能被应用识别，**核心变量通用适配 X11/XWayland/Wayland**，
+但 `GTK_IM_MODULE`/`QT_IM_MODULE` 需按 Wayland 合成器（如 Hyprland/KDE/GNOME）差异化配置（官方不推荐全局设置 `GTK_IM_MODULE`，避免兼容问题）。
 
 #### 5.3.1 全局配置（所有用户生效）
+
 编辑全局环境变量文件，优先配置「核心必设变量」，再按合成器补充 `QT_IM_MODULE`：
+
 ```bash
 sudo nano /etc/environment
 ```
 
 ##### 第一步：添加核心必设变量（所有场景通用）
+
 这部分是基础，确保 XWayland 应用和 Wayland 原生应用识别 Fcitx 5：
+
 ```ini
 # ========== 核心必设（所有合成器通用） ==========
 # 兼容 X11/XWayland 应用（必设！X11 程序依赖此变量）
@@ -335,7 +348,9 @@ GLFW_IM_MODULE=fcitx
 ```
 
 ##### 第二步：按合成器补充 QT_IM_MODULE（二选一/按需添加）
+
 根据你使用的 Wayland 合成器，添加对应配置（**不要全局设置 GTK_IM_MODULE**，见 5.3.3 单独配置）：
+
 ```ini
 # ========== 分合成器适配 QT 应用（择一添加） ==========
 # 1. Hyprland/Sway/Niri（wlroots 系，必加）
@@ -347,7 +362,9 @@ QT_IM_MODULE=fcitx
 ```
 
 #### 5.3.2 单用户配置（仅当前用户生效）
+
 若不想修改全局配置，编辑用户级配置文件，内容与全局配置完全一致：
+
 ```bash
 # 方式1：登录 Shell 生效（通用）
 nano ~/.profile
@@ -355,49 +372,65 @@ nano ~/.profile
 mkdir -p ~/.config/environment.d
 nano ~/.config/environment.d/fcitx5.conf
 ```
+
 粘贴「核心必设变量 + 对应合成器的 QT_IM_MODULE」即可。
 
 #### 5.3.3 GTK 应用单独配置（替代全局 GTK_IM_MODULE）
+
 全局设置 `GTK_IM_MODULE=fcitx` 会导致 Gtk2 应用兼容问题，官方推荐通过 GTK 版本专属配置文件适配：
+
 ##### 1. Gtk2 应用（老旧软件，如 rxvt/xterm）
+
 ```bash
 nano ~/.gtkrc-2.0
 ```
+
 添加：
+
 ```ini
 gtk-im-module="fcitx"
 ```
 
 ##### 2. Gtk3 应用（主流 GTK 软件，如 Gedit）
+
 ```bash
 mkdir -p ~/.config/gtk-3.0
 nano ~/.config/gtk-3.0/settings.ini
 ```
+
 添加：
+
 ```ini
 [Settings]
 gtk-im-module=fcitx
 ```
 
 ##### 3. Gtk4 应用（最新 GTK 软件，如 libadwaita 系列）
+
 ```bash
 mkdir -p ~/.config/gtk-4.0
 nano ~/.config/gtk-4.0/settings.ini
 ```
+
 添加：
+
 ```ini
 [Settings]
 gtk-im-module=fcitx
 ```
 
 ##### 4. GNOME 额外适配（必做）
+
 GNOME 需通过 `gsettings` 覆盖系统 XSettings，否则 Gtk 应用可能无法识别输入法：
+
 ```bash
 gsettings set org.gnome.settings-daemon.plugins.xsettings overrides "{'Gtk/IMModule':<'fcitx'>}"
 ```
 
 ### 5.3.4 生效配置
+
 环境变量和 GTK 配置需重新登录系统才能生效（无需重启整机），也可手动重启 Fcitx 5 验证：
+
 ```bash
 # 重启 Fcitx 5 后台进程
 killall fcitx5 & fcitx5 &
@@ -406,13 +439,14 @@ fcitx5-configtool
 ```
 
 在配置工具中操作：
+
 > 1. 右侧「可用输入法」中找到「中州韵」（或 RIME），点击「添加」；
 > 2. 可选：调整输入法切换快捷键（默认 Ctrl+Space）；
 > 3. 关闭配置工具，重启终端/应用即可使用。
-关键说明：
-> 1. 若闭源 Qt 应用（如 WPS/Anki）无法输入，可临时执行 `QT_IM_MODULE=fcitx 应用名` 单独适配；
-> 2. Qt 6.7+ 可添加 `QT_IM_MODULES="wayland;fcitx;ibus"` 实现输入法模块 fallback，提升兼容性；
-> 3. 保留 XWayland 启用（多数合成器默认开启），否则 Fcitx 候选框可能无法正常显示。
+>    关键说明：
+> 4. 若闭源 Qt 应用（如 WPS/Anki）无法输入，可临时执行 `QT_IM_MODULE=fcitx 应用名` 单独适配；
+> 5. Qt 6.7+ 可添加 `QT_IM_MODULES="wayland;fcitx;ibus"` 实现输入法模块 fallback，提升兼容性；
+> 6. 保留 XWayland 启用（多数合成器默认开启），否则 Fcitx 候选框可能无法正常显示。
 
 > 首次使用需等待雾凇词库加载，按 Ctrl+Space 切换中英文。
 
@@ -479,13 +513,13 @@ swaybg \
 swaylock
 ```
 
-waybar-hyprland-git           # Hyprland 适配版状态栏
-libnotify                     # 通知服务
-xdg-desktop-portal-hyprland   # Hyprland 门户服务（文件选择/截图等）
-xdg-desktop-portal-gnome      # 通用门户服务
-xdg-desktop-portal-gtk        # GTK 应用门户服务
-swaybg                        # 壁纸工具
-swaylock                      # 锁屏工具
+waybar-hyprland-git # Hyprland 适配版状态栏
+libnotify # 通知服务
+xdg-desktop-portal-hyprland # Hyprland 门户服务（文件选择/截图等）
+xdg-desktop-portal-gnome # 通用门户服务
+xdg-desktop-portal-gtk # GTK 应用门户服务
+swaybg # 壁纸工具
+swaylock # 锁屏工具
 
 #### 8.2.1 启动 Hyprland
 
@@ -510,10 +544,10 @@ xdg-desktop-portal-gnome \
 xdg-desktop-portal-gtk
 ```
 
-xwayland-satellite        # X11 应用兼容
-waybar                    # 状态栏
-fuzzel                    # 应用启动器
-fnott                     # 通知服务
+xwayland-satellite # X11 应用兼容
+waybar # 状态栏
+fuzzel # 应用启动器
+fnott # 通知服务
 xdg-desktop-portal-gnome
 xdg-desktop-portal-gtk
 
@@ -602,11 +636,13 @@ sudo nano /etc/default/grub
 ```
 
 在 `GRUB_CMDLINE_LINUX_DEFAULT` 中添加以下参数（保留原有参数，如 loglevel=3 quiet）：
+
 ```ini
 GRUB_CMDLINE_LINUX_DEFAULT="loglevel=3 quiet nowatchdog ibt=off nvidia-drm.modeset=1 modprobe.blacklist=snd_hda_codec_hdmi"
 ```
 
 > 说明：
+>
 > - `nvidia-drm.modeset=1`：启用 NVIDIA DRM 模式设置（Wayland 下必需）；
 > - `modprobe.blacklist=snd_hda_codec_hdmi`：黑名单禁用 NVIDIA 声卡驱动；
 > - `ibt=off`：修复部分 Intel CPU 与 NVIDIA 驱动兼容问题。
@@ -635,13 +671,13 @@ wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle  # 切换静音/取消静音
 
 ### 12.2 常见问题排查
 
-| 问题现象 | 排查方案 |
-|---|---|
-| fcitx5 无法唤醒 | 1. 检查环境变量是否配置正确（/etc/environment 或 ~/.profile）；<br>2. 重启会话/系统；<br>3. 执行 `fcitx5 -d` 后台启动输入法。 |
-| NVIDIA 驱动失效 | 1. 确认已安装对应内核头文件；<br>2. 执行 `sudo dkms autoinstall` 重新编译驱动；<br>3. 检查 GRUB 内核参数是否包含 `nvidia-drm.modeset=1`。 |
-| 音频无声音 | 1. 检查 PipeWire 服务是否运行（`systemctl --user status pipewire`）；<br>2. `pavucontrol` 确认默认输出设备正确；<br>3. 安装对应声卡固件（sof-firmware）。 |
-| Wayland 应用无文件选择框 | 安装对应门户服务（xdg-desktop-portal-hyprland/gnome/gtk）；<br>重启应用/桌面。 |
-| AUR 包编译失败 | 1. 安装 base-devel 依赖（`sudo pacman -S base-devel`）；<br>2. 检查网络是否正常；<br>3. 清理 paru 缓存（`paru -Scc`）。 |
+| 问题现象                 | 排查方案                                                                                                                                                  |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| fcitx5 无法唤醒          | 1. 检查环境变量是否配置正确（ `/etc/environment` 或 `~/.profile`）；<br>2. 重启会话/系统；<br>3. 执行 `fcitx5 -d` 后台启动输入法。                        |
+| NVIDIA 驱动失效          | 1. 确认已安装对应内核头文件；<br>2. 执行 `sudo dkms autoinstall` 重新编译驱动；<br>3. 检查 GRUB 内核参数是否包含 `nvidia-drm.modeset=1`。                 |
+| 音频无声音               | 1. 检查 PipeWire 服务是否运行（`systemctl --user status pipewire`）；<br>2. `pavucontrol` 确认默认输出设备正确；<br>3. 安装对应声卡固件（sof-firmware）。 |
+| Wayland 应用无文件选择框 | 安装对应门户服务（xdg-desktop-portal-hyprland/gnome/gtk）；<br>重启应用/桌面。                                                                            |
+| AUR 包编译失败           | 1. 安装 base-devel 依赖（`sudo pacman -S base-devel`）；<br>2. 检查网络是否正常；<br>3. 清理 paru 缓存（`paru -Scc`）。                                   |
 
 ### 12.3 系统清理
 

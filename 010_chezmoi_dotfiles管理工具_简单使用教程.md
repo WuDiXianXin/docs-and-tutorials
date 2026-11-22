@@ -25,10 +25,10 @@
 
 理解 chezmoi 的关键在于区分两个目录：
 
-| 目录 | 默认位置 | 作用 |
-| :--- | :--- | :--- |
-| **源目录 Source Directory** | `~/.local/share/chezmoi` | dotfiles 的“真实来源”，所有配置文件以特殊命名形式存储在这里，并受 Git 版本控制 |
-| **目标目录 Target Directory** | `~`，即 Home 目录 | 配置文件实际生效的地方 |
+| 目录                          | 默认位置                 | 作用                                                                           |
+| :---------------------------- | :----------------------- | :----------------------------------------------------------------------------- |
+| **源目录 Source Directory**   | `~/.local/share/chezmoi` | dotfiles 的“真实来源”，所有配置文件以特殊命名形式存储在这里，并受 Git 版本控制 |
+| **目标目录 Target Directory** | `~`，即 Home 目录        | 配置文件实际生效的地方                                                         |
 
 工作流程：
 
@@ -198,18 +198,18 @@ git push -u origin main
 
 chezmoi 通过文件名前缀决定目标文件的位置和属性。
 
-| 前缀 | 作用 | 示例 |
-| :--- | :--- | :--- |
-| `dot_` | 替换为 `.`，用于隐藏文件 | `dot_bashrc` → `~/.bashrc` |
-| `private_` | 设置文件权限为 `0600`，仅所有者可读写 | `private_dot_ssh/config` |
-| `executable_` | 设置可执行权限 | `executable_dot_local/bin/myscript` |
-| `exact_` | 精确管理目录，删除目标目录中多余的文件 | `exact_dot_config/nvim` |
-| `encrypted_` | 加密文件 | `encrypted_private_dot_ssh/config` |
-| `run_` | 每次 `apply` 都执行的脚本 | `run_install-packages.sh` |
-| `run_once_` | 只执行一次的脚本 | `run_once_install-packages.sh` |
-| `run_onchange_` | 内容变化时执行的脚本 | `run_onchange_reload-service.sh` |
-| `symlink_` | 创建符号链接 | `symlink_dot_vimrc` |
-| `literal_` | 不解析模板，按字面量处理 | `literal_dot_file` |
+| 前缀            | 作用                                   | 示例                                |
+| :-------------- | :------------------------------------- | :---------------------------------- |
+| `dot_`          | 替换为 `.`，用于隐藏文件               | `dot_bashrc` → `~/.bashrc`          |
+| `private_`      | 设置文件权限为 `0600`，仅所有者可读写  | `private_dot_ssh/config`            |
+| `executable_`   | 设置可执行权限                         | `executable_dot_local/bin/myscript` |
+| `exact_`        | 精确管理目录，删除目标目录中多余的文件 | `exact_dot_config/nvim`             |
+| `encrypted_`    | 加密文件                               | `encrypted_private_dot_ssh/config`  |
+| `run_`          | 每次 `apply` 都执行的脚本              | `run_install-packages.sh`           |
+| `run_once_`     | 只执行一次的脚本                       | `run_once_install-packages.sh`      |
+| `run_onchange_` | 内容变化时执行的脚本                   | `run_onchange_reload-service.sh`    |
+| `symlink_`      | 创建符号链接                           | `symlink_dot_vimrc`                 |
+| `literal_`      | 不解析模板，按字面量处理               | `literal_dot_file`                  |
 
 ---
 
@@ -241,14 +241,14 @@ chezmoi add --template ~/.gitconfig
 
 chezmoi 会自动提供以下常用变量：
 
-| 变量 | 说明 |
-| :--- | :--- |
-| `.chezmoi.os` | 操作系统，如 `darwin`、`linux`、`windows` |
-| `.chezmoi.arch` | 架构，如 `amd64`、`arm64` |
-| `.chezmoi.hostname` | 主机名 |
-| `.chezmoi.username` | 用户名 |
-| `.chezmoi.homeDir` | Home 目录 |
-| `.chezmoi.sourceDir` | 源目录 |
+| 变量                 | 说明                                      |
+| :------------------- | :---------------------------------------- |
+| `.chezmoi.os`        | 操作系统，如 `darwin`、`linux`、`windows` |
+| `.chezmoi.arch`      | 架构，如 `amd64`、`arm64`                 |
+| `.chezmoi.hostname`  | 主机名                                    |
+| `.chezmoi.username`  | 用户名                                    |
+| `.chezmoi.homeDir`   | Home 目录                                 |
+| `.chezmoi.sourceDir` | 源目录                                    |
 
 自定义数据可以在 `chezmoi.toml` 中定义：
 
@@ -400,11 +400,11 @@ chezmoi add --encrypt ~/.ssh/config
 
 常见脚本类型：
 
-| 脚本前缀 | 执行时机 |
-| :--- | :--- |
-| `run_` | 每次 `chezmoi apply` 都执行 |
-| `run_once_` | 只执行一次 |
-| `run_onchange_` | 脚本内容变化时执行 |
+| 脚本前缀        | 执行时机                    |
+| :-------------- | :-------------------------- |
+| `run_`          | 每次 `chezmoi apply` 都执行 |
+| `run_once_`     | 只执行一次                  |
+| `run_onchange_` | 脚本内容变化时执行          |
 
 例如，创建一个 `run_once_install-packages.sh`：
 
@@ -428,30 +428,30 @@ fi
 
 ## 常用命令速查
 
-| 命令 | 说明 |
-| :--- | :--- |
-| `chezmoi init` | 初始化源目录 |
-| `chezmoi init --apply <repo>` | 克隆远程仓库并应用配置 |
-| `chezmoi add <file>` | 添加文件到管理 |
-| `chezmoi add --template <file>` | 添加为模板 |
-| `chezmoi add --encrypt <file>` | 添加为加密文件 |
-| `chezmoi edit <file>` | 编辑源目录中的文件 |
-| `chezmoi edit --apply <file>` | 编辑后自动应用 |
-| `chezmoi diff` | 预览变更 |
-| `chezmoi apply` | 应用变更到 Home 目录 |
-| `chezmoi apply --dry-run` | 只预览，不实际应用 |
-| `chezmoi update` | 拉取远程变更并应用 |
-| `chezmoi cd` | 进入源目录 shell |
-| `chezmoi source-path <file>` | 查看目标文件对应的源文件路径 |
-| `chezmoi cat <file>` | 查看目标文件渲染后的内容 |
-| `chezmoi managed` | 列出被管理的文件 |
-| `chezmoi status` | 查看状态 |
-| `chezmoi verify` | 验证目标目录是否与期望一致 |
-| `chezmoi forget <file>` | 取消管理，但不删除目标文件 |
-| `chezmoi destroy <file>` | 删除源文件和目标文件，慎用 |
-| `chezmoi data` | 查看模板数据 |
-| `chezmoi execute-template` | 测试模板片段 |
-| `chezmoi doctor` | 检查 chezmoi 环境是否正常 |
+| 命令                            | 说明                         |
+| :------------------------------ | :--------------------------- |
+| `chezmoi init`                  | 初始化源目录                 |
+| `chezmoi init --apply <repo>`   | 克隆远程仓库并应用配置       |
+| `chezmoi add <file>`            | 添加文件到管理               |
+| `chezmoi add --template <file>` | 添加为模板                   |
+| `chezmoi add --encrypt <file>`  | 添加为加密文件               |
+| `chezmoi edit <file>`           | 编辑源目录中的文件           |
+| `chezmoi edit --apply <file>`   | 编辑后自动应用               |
+| `chezmoi diff`                  | 预览变更                     |
+| `chezmoi apply`                 | 应用变更到 Home 目录         |
+| `chezmoi apply --dry-run`       | 只预览，不实际应用           |
+| `chezmoi update`                | 拉取远程变更并应用           |
+| `chezmoi cd`                    | 进入源目录 shell             |
+| `chezmoi source-path <file>`    | 查看目标文件对应的源文件路径 |
+| `chezmoi cat <file>`            | 查看目标文件渲染后的内容     |
+| `chezmoi managed`               | 列出被管理的文件             |
+| `chezmoi status`                | 查看状态                     |
+| `chezmoi verify`                | 验证目标目录是否与期望一致   |
+| `chezmoi forget <file>`         | 取消管理，但不删除目标文件   |
+| `chezmoi destroy <file>`        | 删除源文件和目标文件，慎用   |
+| `chezmoi data`                  | 查看模板数据                 |
+| `chezmoi execute-template`      | 测试模板片段                 |
+| `chezmoi doctor`                | 检查 chezmoi 环境是否正常    |
 
 ---
 

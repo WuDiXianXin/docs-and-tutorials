@@ -40,6 +40,7 @@ cmake --build build
 ```
 
 CMake `Debug` 模式默认：
+
 - `-g` 开启调试符号
 - `-O0` 关闭优化
 

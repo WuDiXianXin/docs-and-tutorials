@@ -4,21 +4,21 @@
 > By WuDiXianXin
 
 > [!IMPORTANT]
-> 核心原则：**能用 VirtIO 就用 VirtIO**。
+> 核心原则：**能用 VirtIO 就用 VirtIO**。  
 > 磁盘和网络使用 VirtIO 驱动，CPU 使用 `host-passthrough` 模式，Windows 10 虚拟机即可获得接近原生的性能体验。
 
 ## 目录
 
 - [前置条件](#前置条件)
 - [创建虚拟机](#创建虚拟机)
-- [安装过程中的关键操作-加载VirtIO存储驱动](#安装过程中的关键操作-加载VirtIO存储驱动)
+- [安装过程中的关键操作-加载VirtIO存储驱动](#安装过程中的关键操作-加载virtio存储驱动)
 - [安装后的驱动与工具安装](#安装后的驱动与工具安装)
 - [性能微调与进阶优化](#性能微调与进阶优化)
 - [常见问题速查](#常见问题速查)
 
 ## 前置条件
 
-- 准备 Win10_22H2_*.iso 镜像，如 /kvm/iso/Win10_22H2_Chinese_Simplified_x64v1.iso。
+- 准备 Win10*22H2*\*.iso 镜像，如 /kvm/iso/Win10_22H2_Chinese_Simplified_x64v1.iso。
 - 下载 [Fedora VirtIO-Win 驱动 ISO](https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/) 并放在 /kvm/iso 目录中。
 
 ## 创建虚拟机
@@ -42,7 +42,7 @@
 > 如果后续没有启用 BitLocker 或安全启动的需求，可以选择不带 secboot 的普通 OVMF 固件以简化配置；
 > 如果选择 secboot 固件但未正确配置 Microsoft 密钥，可能影响启动。
 
-### CPU配置
+### cpu配置
 
 - **CPU 模式**：**`host-passthrough`**。
 - **CPU 拓扑**：建议勾选“复制主机 CPU 配置”（Copy host CPU configuration），virt-manager 会自动将模式设为 `host-passthrough` 并匹配拓扑。
@@ -58,10 +58,10 @@ virsh dumpxml <虚拟机名> | grep "cpu mode"
 
 ### 内存与CPU核心
 
-| 资源 | 最低建议 | 推荐 |
-|---|---|---|
-| 内存 | 4 GB | 8 GB 或更多 |
-| vCPU | 2 核 | 4 核或更多 |
+| 资源 | 最低建议 | 推荐        |
+| ---- | -------- | ----------- |
+| 内存 | 4 GB     | 8 GB 或更多 |
+| vCPU | 2 核     | 4 核或更多  |
 
 ### 磁盘
 
@@ -70,13 +70,14 @@ virsh dumpxml <虚拟机名> | grep "cpu mode"
 - **容量**：建议 **60 GB 以上**（Windows 10 系统盘会随更新持续增长，50 GB 是下限，60 GB 以上更从容）。
 
 > [!TIP]
+>
 > 1. Windows 10 安装镜像**不包含 VirtIO 存储驱动**。在安装过程中必须手动加载驱动，否则磁盘列表将为空白。这是正常现象，不是配置错误。
-> 
 > 2. 后续可以扩张这个 qcow2 存储大小。
->   ```bash
->   qemu-img resize /path/to/disk.qcow2 +20G   # 关机后
->   # 再进 Windows 磁盘管理 → 扩展卷
->   ```
+>
+> ```bash
+> qemu-img resize /path/to/disk.qcow2 +20G   # 关机后
+> # 再进 Windows 磁盘管理 → 扩展卷
+> ```
 
 ### 网络
 
@@ -95,7 +96,7 @@ virsh dumpxml <虚拟机名> | grep "cpu mode"
 
 确保虚拟机此时有两个光驱：一个指向 Windows 10 ISO，另一个指向 virtio-win ISO。
 
-### 显示协议 
+### 显示协议
 
 默认即可。
 
@@ -123,7 +124,7 @@ virsh dumpxml <虚拟机名> | grep "cpu mode"
 
 通常将 Windows 安装镜像放在首位；VirtIO 驱动光驱只需要能被 Windows 安装程序读取到即可，不要求从它引导。
 
-## 安装过程中的关键操作-加载VirtIO存储驱动
+## 安装过程中的关键操作-加载virtio存储驱动
 
 点击左上角的 “开始安装”按钮。
 
@@ -137,7 +138,7 @@ virsh dumpxml <虚拟机名> | grep "cpu mode"
 2. 点击 **“浏览”** ，定位到 virtio-win 光驱。
 3. 对于 Windows 10 x64，进入：
 
-   ```
+   ```txt
    viostor\w10\amd64\
 
    或者
@@ -167,13 +168,11 @@ virsh dumpxml <虚拟机名> | grep "cpu mode"
 如果 `virtio-win-guest-tools.exe` 因某种原因不可用，可以在设备管理器中找到带黄色感叹号的设备（如“以太网控制器”），
 右键“更新驱动程序” → “浏览计算机以查找驱动程序”，指向 virtio-win 光驱中对应目录：
 
-
-| 设备 | 驱动目录 |
-|---|---|
-| 网卡 | `NetKVM\w10\amd64\` |
-| Balloon（内存气球） | `Balloon\w10\amd64\` |
-| 串口 / 其他 | 对应 `w10\amd64` 子目录 |
-
+| 设备                | 驱动目录                |
+| ------------------- | ----------------------- |
+| 网卡                | `NetKVM\w10\amd64\`     |
+| Balloon（内存气球） | `Balloon\w10\amd64\`    |
+| 串口 / 其他         | 对应 `w10\amd64` 子目录 |
 
 手动安装网卡驱动时，**不要通过远程桌面操作**——安装过程会更新网卡驱动，可能导致当前网络连接中断。应通过 virt-manager 的图形控制台（SPICE/VNC）操作。
 
@@ -197,7 +196,7 @@ Get-PnpDevice -Status Error, Unknown | Format-Table -AutoSize
 
 ### 确认CPU模式为host-passthrough
 
-已在 [CPU配置](#CPU配置) 一节设置
+已在 [CPU配置](#cpu配置) 一节设置
 
 ```bash
 virsh dumpxml <虚拟机名> | grep -i "cpu mode"
@@ -257,22 +256,21 @@ virsh dumpxml <虚拟机名> | grep -i "cpu mode"
 > [!TIP]
 > `evmcs` 仅 Intel 平台有效，`avic` 仅 AMD 平台有效。
 > 保留不匹配的项通常无害（可设为 `off` 或直接删除）；若启动报错再删。
-> 
-> <smm> 是 Secure Boot 所需；若不启用 Secure Boot 可设为 off，略微减少开销。
-> 
-> vendor_id 与 <kvm><hidden> 用于隐藏虚拟化特征（如规避 NVIDIA 驱动检测），与性能无关，无此需求可删除。
+>
+> \<smm\> 是 Secure Boot 所需；若不启用 Secure Boot 可设为 off，略微减少开销。
+>
+> vendor_id 与 \<kvm\>\<hidden\> 用于隐藏虚拟化特征（如规避 NVIDIA 驱动检测），与性能无关，无此需求可删除。
 
 ### 配置时钟源（hypervclock）
 
 在虚拟机的 `<clock>` 段中启用 `hypervclock`，让 Windows 使用 Hyper-V 半虚拟化时钟源，减少时间漂移和定时器轮询带来的 CPU 开销。
 
 > [!TIP]
-> 通常已默认启用，可用以下命令确认；若未启用再手动添加。 
+> 通常已默认启用，可用以下命令确认；若未启用再手动添加。
 
 ```bash
 virsh dumpxml <vm> | grep -A2 "<clock"
 ```
-
 
 ```xml
 <clock offset='localtime'>
